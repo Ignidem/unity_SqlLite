@@ -7,7 +7,15 @@ namespace SqlLite.Wrapper
 {
 	public static partial class SqliteHandler
 	{
-		private static readonly string dbPath = "URI=file:" + Application.persistentDataPath + "/ql_dtbs.db";
+		public static string DBPath
+		{
+			get => dbPath;
+			set
+			{
+				dbPath = "URI=file:" + Application.persistentDataPath + '/' + value;
+			}
+		}
+		private static string dbPath = "URI=file:" + Application.persistentDataPath + "/ql_dtbs.db";
 
 		public static void SaveEntity<I>(object entity, I id)
 		{
@@ -79,7 +87,7 @@ namespace SqlLite.Wrapper
 			return found ? entry : default;
 		}
 
-		private static T[] LoadAll<T, K>(K id, string keyName) where T : class, ITable, new()
+		public static T[] LoadAll<T, K>(K id, string keyName)
 		{
 			Type type = typeof(T);
 			TableInfo table = GetTableInfo(type);
@@ -98,7 +106,7 @@ namespace SqlLite.Wrapper
 				{
 					while (reader.Read())
 					{
-						T entry = new T();
+						T entry = table.ConstructEmpty<T>();
 						ReadEntry(entry, table, reader);
 						entries.Add(entry);
 					}
