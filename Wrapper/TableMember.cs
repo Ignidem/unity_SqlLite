@@ -10,10 +10,12 @@ namespace SqlLite.Wrapper
 
 		public string Name => isField ? field.Name : prop.Name;
 		public Type ValueType => isField ? field.FieldType : prop.PropertyType;
-		public MemberInfo Member => (isField ? field : (MemberInfo)prop);
+		public MemberInfo Member => isField ? field : prop;
 
-		public bool IsNotSerializable => isField ? field.IsNotSerialized
-			: !(prop.SetMethod.IsPublic && prop.GetMethod.IsPublic);
+		public bool IsNotSerializable => isField ? field.IsNotSerialized : !CanRead || !CanWrite;
+
+		public bool CanRead => isField || (prop.GetMethod?.IsPublic ?? false);
+		public bool CanWrite => isField || (prop.SetMethod?.IsPublic ?? false);
 
 		private readonly bool isField;
 		private readonly FieldInfo field;
