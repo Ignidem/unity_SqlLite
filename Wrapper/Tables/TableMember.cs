@@ -12,7 +12,7 @@ namespace SqlLite.Wrapper
 		public Type ValueType => isField ? field.FieldType : prop.PropertyType;
 		public MemberInfo Member => isField ? field : prop;
 
-		public bool IsNotSerializable => isField ? field.IsNotSerialized : !CanRead || !CanWrite;
+		public bool IsNotSerializable => !CanRead || nonSerialized != null;
 
 		public bool CanRead => isField || (prop.GetMethod?.IsPublic ?? false);
 		public bool CanWrite => isField || (prop.SetMethod?.IsPublic ?? false);
@@ -20,6 +20,9 @@ namespace SqlLite.Wrapper
 		private readonly bool isField;
 		private readonly FieldInfo field;
 		private readonly PropertyInfo prop;
+
+		//Attributes
+		private readonly NonSerializedAttribute nonSerialized;
 
 		private Type Parent => isField ? field.DeclaringType : prop.DeclaringType;
 
@@ -35,6 +38,8 @@ namespace SqlLite.Wrapper
 				prop = (PropertyInfo)member;
 				isField = false;
 			}
+
+			nonSerialized = member.GetCustomAttribute<NonSerializedAttribute>();
 		}
 
 		public object GetValue(object instance)
@@ -42,6 +47,8 @@ namespace SqlLite.Wrapper
 
 		public void SetValue(object instance, object value)
 		{
+			if (!CanWrite) return;
+
 			if (value.GetType() == typeof(DBNull))
 				value = null;
 

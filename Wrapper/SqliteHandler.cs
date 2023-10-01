@@ -1,4 +1,5 @@
 ﻿using Mono.Data.Sqlite;
+using SqlLite.Wrapper.Serialization;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -170,6 +171,9 @@ namespace SqlLite.Wrapper
 			{
 				table.identifier.SetValue(entry, v);
 			}
+
+			if (entry is IOnDeserialized deserialized)
+				deserialized.OnFinishRead();
 		}
 	}
 }
