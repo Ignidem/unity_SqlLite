@@ -1,11 +1,14 @@
 ﻿using Mono.Data.Sqlite;
+using SqlLite.Wrapper.QueryExtensions;
 using SqlLite.Wrapper.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
 namespace SqlLite.Wrapper
 {
+
 	public static partial class SqliteHandler
 	{
 		public static string DBPath
@@ -88,18 +91,38 @@ namespace SqlLite.Wrapper
 			return found ? entry : default;
 		}
 
-		public static T[] LoadAll<T, K>(K id, string keyName)
+		public static T[] LoadAll<T, K>(K id, string keyName, params Condition[] conditions)
 		{
 			Type type = typeof(T);
 			TableInfo table = GetTableInfo(type);
 			List<T> entries = new List<T>();
-			CreateQuery(string.Format(table.select, keyName), cmd =>
+
+			StringBuilder sb = new StringBuilder(string.Format(table.select, keyName));
+
+			for (int i = 0; i < conditions.Length; i++)
+			{
+				Condition cnd = conditions[i];
+				sb.AppendFormat(" AND {0}", cnd.ToSQL());
+			}
+
+			CreateQuery(sb.ToString(), cmd =>
 			{
 				cmd.Parameters.Add(new SqliteParameter
 				{
 					ParameterName = "Id",
 					Value = id
 				});
+
+				for (int i = 0; i < conditions.Length; i++)
+				{
+					Condition cnd = conditions[i];
+
+					cmd.Parameters.Add(new SqliteParameter
+					{
+						ParameterName = cnd.valueParameterName,
+						Value = cnd.value
+					});
+				}
 
 #pragma warning disable IDE0063 // Use simple 'using' statement
 				using (SqliteDataReader reader = cmd.ExecuteReader())
