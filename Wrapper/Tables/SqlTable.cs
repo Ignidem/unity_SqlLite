@@ -3,6 +3,7 @@
 	public static partial class SqliteHandler
 	{
 		public abstract class SqlTable<TKey> : ISqlTable<TKey>
+			where TKey : struct
 		{
 			public static TEntry LoadOne<TEntry>(TKey id, bool createIfNone = false)
 				=> LoadOne<TEntry, TKey>(id, "Id", createIfNone);

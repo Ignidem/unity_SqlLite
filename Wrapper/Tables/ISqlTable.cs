@@ -1,8 +1,15 @@
 ﻿namespace SqlLite.Wrapper
 {
-	public interface ISqlTable<I> 
+	public interface ISqlTable
+	{
+		void Save();
+	}
+
+	public interface ISqlTable<I> : ISqlTable
 	{ 
 		I Id { get; set; }
+
+		void ISqlTable.Save() => SqlTableEx.Save(this);
 	}
 
 	public static class SqlTableEx

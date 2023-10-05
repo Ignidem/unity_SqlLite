@@ -8,7 +8,6 @@ using UnityEngine;
 
 namespace SqlLite.Wrapper
 {
-
 	public static partial class SqliteHandler
 	{
 		public static string DBPath
@@ -27,11 +26,14 @@ namespace SqlLite.Wrapper
 
 			TableInfo table = GetTableInfo(type);
 
+			if (table.idAutoIncr != null)
+				id = table.AutoIncrementIndex(entity, id);
+
 			CreateQuery(table.save, cmd =>
 			{
 				cmd.Parameters.Add(new SqliteParameter
 				{
-					ParameterName = "Id",
+					ParameterName = table.identifier.Name,
 					Value = id
 				});
 
@@ -48,47 +50,13 @@ namespace SqlLite.Wrapper
 					});
 				}
 
-				var result = cmd.ExecuteNonQuery();
+				int result = cmd.ExecuteNonQuery();
 			});
 		}
 
 		public static T LoadOne<T, I>(I id, string keyName, bool createIfnone)
 		{
-			Type type = typeof(T);
-			bool found = false;
-
-			TableInfo table = GetTableInfo(type);
-			T entry = table.ConstructEmpty<T>();
-
-			CreateQuery(string.Format(table.select, keyName), cmd =>
-			{
-				cmd.Parameters.Add(new SqliteParameter
-				{
-					ParameterName = "Id",
-					Value = id
-				});
-
-#pragma warning disable IDE0063 // Use simple 'using' statement
-				using (SqliteDataReader reader = cmd.ExecuteReader())
-#pragma warning restore IDE0063 // Use simple 'using' statement
-				{
-					if (!reader.Read()) return;
-
-					found = true;
-					ReadEntry(entry, table, reader);
-				}
-			});
-
-			if (!found && createIfnone)
-			{
-				if (entry is ISqlTable<I> ken)
-					ken.Id = id;
-				
-				SaveEntity(entry, id);
-				return entry;
-			}
-
-			return found ? entry : default;
+			return LoadOne<T>(typeof(T), id, keyName, createIfnone);
 		}
 
 		public static T[] LoadAll<T, K>(K id, string keyName, params Condition[] conditions)
@@ -177,7 +145,44 @@ namespace SqlLite.Wrapper
 			});
 		}
 
-		private static void ReadEntry<T>(T entry, TableInfo table, SqliteDataReader reader)
+		private static T LoadOne<T>(Type type, object id, string keyName, bool createIfnone)
+		{
+			bool found = false;
+
+			TableInfo table = GetTableInfo(type);
+			T entry = table.ConstructEmpty<T>();
+
+			CreateQuery(string.Format(table.select, keyName), cmd =>
+			{
+				cmd.Parameters.Add(new SqliteParameter
+				{
+					ParameterName = "Id",
+					Value = id
+				});
+
+#pragma warning disable IDE0063 // Use simple 'using' statement
+				using (SqliteDataReader reader = cmd.ExecuteReader())
+#pragma warning restore IDE0063 // Use simple 'using' statement
+				{
+					if (!reader.Read()) return;
+
+					found = true;
+					ReadEntry(entry, table, reader);
+				}
+			});
+
+			if (!found && createIfnone)
+			{
+				table.identifier.SetValue(entry, id);
+				SaveEntity(entry, id);
+				return entry;
+			}
+
+			return found ? entry : default;
+
+		}
+
+		private static void ReadEntry(object entry, TableInfo table, SqliteDataReader reader)
 		{
 			Dictionary<string, object> values = GetColumnValues(reader);
 

@@ -188,13 +188,16 @@ namespace SqlLite.Wrapper
 				return "TEXT";
 
 			if (type == typeof(short) || type == typeof(int) || type == typeof(long))
-				return "INTEGER";
+				return "INT";
 
 			if (type == typeof(float) || type == typeof(double) || type == typeof(decimal))
 				return "REAL";
 
 			if (type == typeof(decimal))
-				return "NUMERIC";
+				return "NUM";
+
+			if (type == typeof(Guid))
+				return "BLOB";
 
 			return "TEXT";
 		}

@@ -28,7 +28,6 @@ namespace SqlLite.Wrapper
 				}
 			});
 
-
 			return found ? entry : default;
 		}
 
