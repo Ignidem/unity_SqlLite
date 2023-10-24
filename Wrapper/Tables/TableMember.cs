@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SqlLite.Wrapper.Serialization;
+using System;
 using System.Linq;
 using System.Reflection;
 using Utilities.Conversions;
@@ -37,6 +38,10 @@ namespace SqlLite.Wrapper
 				};
 
 				if (type == null) return null;
+
+				SqlSerializerAttribute serializerAttribute = member.GetCustomAttribute<SqlSerializerAttribute>();
+				if (serializerAttribute?.IsValid ?? false)
+					return new SerializedTableMember(member, serializerAttribute);
 
 				if (IsTypeSupported(type))
 					return new TableMember(member);

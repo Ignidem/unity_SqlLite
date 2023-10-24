@@ -33,6 +33,7 @@ namespace SqlLite.Wrapper
 
 				idAutoIncr = type.GetCustomAttribute<AutoIncrementAttribute>()
 					?? identifier?.Member.GetCustomAttribute<AutoIncrementAttribute>();
+				idAutoIncr?.SetType(type);
 
 				select = $"SELECT * FROM {type.Name} WHERE {{0}} = @{identifier.Name}";
 
@@ -103,7 +104,7 @@ namespace SqlLite.Wrapper
 				//id was already previously set;
 				if (i != 0) return id;
 				
-				object index = idAutoIncr.GetNextIndex(type);
+				object index = idAutoIncr.GetNextIndex();
 				identifier.SetValue(entry, index);
 				return (I)index;
 			}

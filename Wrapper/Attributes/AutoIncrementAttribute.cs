@@ -16,13 +16,26 @@ namespace SqlLite.Wrapper
 				public __AutoIncrementIndexes() { }
 			}
 
-			public int GetNextIndex(Type type)
+			public static int GetNextIndex(Type type) => GetNextIndex(type.Name);
+			private static int GetNextIndex(string name)
 			{
 				const string id = nameof(__AutoIncrementIndexes.Id);
-				__AutoIncrementIndexes indexer = LoadOne<__AutoIncrementIndexes, string>(type.Name, id, true);
+				__AutoIncrementIndexes indexer = LoadOne<__AutoIncrementIndexes, string>(name, id, true);
 				indexer.Index += 1;
 				indexer.Save();
 				return indexer.Index;
+			}
+
+			private string table;
+
+			public int GetNextIndex()
+			{
+				return GetNextIndex(table);
+			}
+
+			internal void SetType(Type type)
+			{
+				table = type.Name;
 			}
 		}
 	}
