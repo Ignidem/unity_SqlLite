@@ -114,7 +114,7 @@ namespace SqlLite.Wrapper
 			DeleteEntity(type, id);
 		}
 
-		private static void DeleteEntity<I>(Type type, I id)
+		public static void DeleteEntity<I>(Type type, I id)
 		{
 			if (!TableExists(type.Name)) return;
 			CreateQuery($"DELETE FROM {type.Name} WHERE Id=@Id", cmd =>
