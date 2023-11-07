@@ -9,7 +9,7 @@ namespace SqlLite.Wrapper.Serialization
 		public readonly Type receivedType;
 
 		public SqlSerializerInvalidTypeException(Type serializerType, Type expectedType, Type receivedType, string action) 
-			: base ($"{serializerType.Name} expected {expectedType.Name} while {action} {receivedType.Name}.")
+			: base ($"{serializerType.Name} expected {expectedType?.Name} while {action} {receivedType?.Name}.")
 		{
 			this.serializerType = serializerType;
 			this.expectedType = expectedType;
@@ -25,7 +25,7 @@ namespace SqlLite.Wrapper.Serialization
 
 		public SqlSerializerFailedConversionException(
 			Type serializerType, Type targetType, Type receivedType, string method) 
-			: base($"{serializerType.Name} failed to convert {receivedType} to {targetType} using {method}")
+			: base($"{serializerType.Name} failed to convert {receivedType?.Name} to {targetType?.Name} using {method}")
 		{
 			this.serializerType = serializerType;
 			this.targetType = targetType;

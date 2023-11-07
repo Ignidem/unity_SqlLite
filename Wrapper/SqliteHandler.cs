@@ -179,7 +179,6 @@ namespace SqlLite.Wrapper
 			}
 
 			return found ? entry : default;
-
 		}
 
 		private static void ReadEntry(object entry, TableInfo table, SqliteDataReader reader)

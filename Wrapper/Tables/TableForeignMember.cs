@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using Utilities.Reflection;
 
 namespace SqlLite.Wrapper
 {
@@ -7,14 +8,15 @@ namespace SqlLite.Wrapper
 	{
 		private class TableForeignMember : TableMember
 		{
-			private readonly PropertyInfo idProperty;
-			private Type IdType => idProperty.PropertyType;
+			private const string IdFieldName = nameof(ISqlTable<int>.Id);
+
+			private readonly Type IdType;
 
 			public override bool IsForeign => true;
 
-			public TableForeignMember(MemberInfo member) : base(member)
+			public TableForeignMember(MemberInfo member, Type table) : base(member)
 			{
-				idProperty = ValueType.GetProperty(nameof(ISqlTable<int>.Id));
+				IdType = table.GetGenericArguments()[0];
 			}
 
 			public override object GetValue(object instance)
@@ -24,18 +26,20 @@ namespace SqlLite.Wrapper
 				if (value == null)
 				{
 					//return default id value;
-					return Activator.CreateInstance(IdType);
+					return IdType.GetDefault();
 				}
 
 				if (value is ISqlTable tbl)
 					tbl.Save();
 
+				Type type = value.GetType();
+				PropertyInfo idProperty = type.GetProperty(IdFieldName);
 				return idProperty.GetValue(value);
 			}
 
 			public override void SetValue(object instance, object value)
 			{
-				object objValue = LoadOne<object>(ValueType, value, idProperty.Name, false);
+				object objValue = LoadOne<object>(ValueType, value, IdFieldName, false);
 				if (objValue == null) return;
 
 				SetValue(instance, objValue);

@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Utilities.Conversions;
+using Utilities.Reflection;
 
 namespace SqlLite.Wrapper
 {
@@ -10,12 +11,17 @@ namespace SqlLite.Wrapper
 	{
 		private class TableMember
 		{
-			private static bool IsForeignReference(Type type)
+			private static bool IsForeignReference(Type type, out Type table)
 			{
 				Type generic = typeof(ISqlTable<>);
-				Type table = type.GetInterfaces()
+				table = type.GetInterfaces()
 					.FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == generic);
-				return table != null;
+
+				bool isSqlTable = table != null;
+				if (isSqlTable && type.IsInterface)
+					throw new Exception($"Interface type {type.Name} requires a serializer.");
+
+				return isSqlTable;
 			}
 
 			private static bool IsTypeSupported(Type type)
@@ -46,8 +52,8 @@ namespace SqlLite.Wrapper
 				if (IsTypeSupported(type))
 					return new TableMember(member);
 
-				if (IsForeignReference(type))
-					return new TableForeignMember(member);
+				if (IsForeignReference(type, out Type table))
+					return new TableForeignMember(member, table);
 
 				return null;
 			}
@@ -58,8 +64,8 @@ namespace SqlLite.Wrapper
 
 			public bool IsNotSerializable => !CanRead || nonSerialized != null;
 
-			public bool CanRead => isField || (prop.GetMethod?.IsPublic ?? false);
-			public bool CanWrite => isField || (prop.SetMethod?.IsPublic ?? false);
+			public bool CanRead => isField || prop.GetMethod != null;
+			public bool CanWrite => isField || prop.SetMethod != null;
 
 			public virtual bool IsForeign => false;
 
@@ -104,11 +110,14 @@ namespace SqlLite.Wrapper
 			{
 				if (!CanWrite) return;
 
-				if (value.GetType() == typeof(DBNull))
+				if (value?.GetType() == typeof(DBNull))
 					value = null;
 
-				value.TryConvertTo(ValueType, out object v);
-				value = v;
+				if (value != null)
+				{
+					value.TryConvertTo(ValueType, out object v);
+					value = v;
+				}
 
 				if (isField) field.SetValue(instance, value);
 				else prop.SetValue(instance, value);

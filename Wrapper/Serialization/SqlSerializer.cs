@@ -8,19 +8,23 @@ namespace SqlLite.Wrapper.Serialization
 		public Type DeserializedType => typeof(TDeserialized);
 		public Type SerializedType => typeof(TSerialized);
 
+		private bool IsDeserializedNullable => !DeserializedType.IsValueType;
+		private bool IsSerializedNullable => !SerializedType.IsValueType;
+
 		public SqlSerializer() { }
 
 		public object Serialize(object input)
 		{
-			if (input is not TDeserialized _t)
+			object r = input switch
 			{
-				throw new SqlSerializerInvalidTypeException(GetType(), DeserializedType, input.GetType(), "serializing");
-			}
+				TDeserialized _t => Serialize(_t),
+				null when IsDeserializedNullable => SerializeNull(),
+				_ => throw new SqlSerializerInvalidTypeException
+					(GetType(), DeserializedType, input?.GetType(), "serializing")
+			};
 
-			object r = Serialize(_t);
-
-			Type type = r.GetType();
-			if (type != SerializedType)
+			Type type = r?.GetType();
+			if (type != SerializedType && (type != null || !IsDeserializedNullable))
 			{
 				throw new SqlSerializerInvalidTypeException(GetType(), SerializedType, type, 
 					"returning value after serialization");
@@ -29,6 +33,7 @@ namespace SqlLite.Wrapper.Serialization
 			return r;
 		}
 
+		protected virtual TSerialized SerializeNull() => default;
 		protected virtual TSerialized Serialize(TDeserialized input)
 		{
 			if (!input.TryConvertTo(out TSerialized r))
@@ -42,16 +47,16 @@ namespace SqlLite.Wrapper.Serialization
 
 		public object Deserialize(object value)
 		{
-			if (value is DBNull)
-				return default(TSerialized);
-
-			if (value is not TSerialized _s)
+			return value switch
 			{
-				throw new SqlSerializerInvalidTypeException(GetType(), SerializedType, value.GetType(), "deserializing");
-			}
-
-			return Deserialize(_s);
+				DBNull or null when IsSerializedNullable => DeserializeNull(),
+				TSerialized _s => Deserialize(_s),
+				_ => throw new SqlSerializerInvalidTypeException
+					(GetType(), SerializedType, value.GetType(), "deserializing")
+			};
 		}
+
+		protected virtual TDeserialized DeserializeNull() => default;
 
 		protected virtual TDeserialized Deserialize(TSerialized value)
 		{
