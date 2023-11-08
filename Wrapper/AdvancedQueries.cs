@@ -1,60 +1,62 @@
 ﻿using Mono.Data.Sqlite;
 using SqlLite.Wrapper.QueryExtensions.QueryBuilder;
+using SqlLite.Wrapper.Serialization;
 using System;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Threading.Tasks;
 
 namespace SqlLite.Wrapper
 {
-	public static partial class SqliteHandler
+	public partial class SqliteHandler
 	{
-		public static T ReadQuery<T>(string query, Action<SqliteCommand> commandFormatter)
+		const string existsFormat = "select name from sqlite_master where name = '{0}' and type = '{1}'";
+
+		public async Task<int> ExecuteQueryAsync(string query)
 		{
-			Type type = typeof(T);
-			bool found = false;
-			TableInfo table = GetTableInfo(type);
-			T entry = table.ConstructEmpty<T>();
-
-			CreateQuery(query, cmd =>
-			{
-				commandFormatter(cmd);
-
-#pragma warning disable IDE0063 // Use simple 'using' statement
-				using (SqliteDataReader reader = cmd.ExecuteReader())
-#pragma warning restore IDE0063 // Use simple 'using' statement
-				{
-					if (!reader.Read()) return;
-
-					found = true;
-					ReadEntry(entry, table, reader);
-				}
-			});
-
-			return found ? entry : default;
+			using SqliteCommand cmd = CreateQuery(query);
+			return await cmd.ExecuteNonQueryAsync();
+		}
+		public async Task<bool> ExistsAsync(string name, string type) 
+		{
+			using SqliteCommand cmd = CreateQuery(string.Format(existsFormat, name, type));
+			DbDataReader reader = await cmd.ExecuteReaderAsync();
+			return await reader.ReadAsync();
 		}
 
-		public static T LoadOne<T>(ConditionalQuery<T> expr)
+		public int ExecuteQuery(string query)
 		{
-			Type type = typeof(T);
-			bool found = false;
+			using SqliteCommand cmd = CreateQuery(query);
+			return cmd.ExecuteNonQuery();
+		}
 
-			TableInfo table = GetTableInfo(type);
-			T entry = table.ConstructEmpty<T>();
+		public bool Exists(string name, string type)
+		{
+			using SqliteCommand cmd = CreateQuery(string.Format(existsFormat, name, type));
+			using DbDataReader reader = cmd.ExecuteReader();
+			return reader.Read();
+		}
 
-			CreateQuery(expr.Query, cmd =>
+		private void ReadEntry(object entry, TableInfo table, DbDataReader reader)
+		{
+			Dictionary<string, object> values = GetColumnValues(reader);
+
+			TableMember[] fields = table.fields;
+			object v;
+			for (int i = 0; i < fields.Length; i++)
 			{
-				expr.FormatParameters(cmd);
+				TableMember field = fields[i];
+				if (values.TryGetValue(field.Name, out v))
+					field.SetValue(this, entry, v);
+			}
 
-#pragma warning disable IDE0063 // Use simple 'using' statement
-				using (SqliteDataReader reader = cmd.ExecuteReader())
-#pragma warning restore IDE0063 // Use simple 'using' statement
-				{
-					if (!reader.Read()) return;
+			if (values.TryGetValue(table.identifier.Name, out v))
+			{
+				table.identifier.SetValue(this, entry, v);
+			}
 
-					found = true;
-					ReadEntry(entry, table, reader);
-				}
-			});
-
-			return found ? entry : default;
+			if (entry is IOnDeserialized deserialized)
+				deserialized.OnFinishRead();
 		}
 	}
 }

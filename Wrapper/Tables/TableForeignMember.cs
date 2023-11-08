@@ -4,7 +4,7 @@ using Utilities.Reflection;
 
 namespace SqlLite.Wrapper
 {
-	public static partial class SqliteHandler
+	public partial class SqliteHandler
 	{
 		private class TableForeignMember : TableMember
 		{
@@ -19,7 +19,7 @@ namespace SqlLite.Wrapper
 				IdType = table.GetGenericArguments()[0];
 			}
 
-			public override object GetValue(object instance)
+			public override object GetValue(SqliteHandler context, object instance)
 			{
 				object value = GetRealValue(instance);
 
@@ -30,19 +30,19 @@ namespace SqlLite.Wrapper
 				}
 
 				if (value is ISqlTable tbl)
-					tbl.Save();
+					tbl.SaveAsync();
 
 				Type type = value.GetType();
 				PropertyInfo idProperty = type.GetProperty(IdFieldName);
 				return idProperty.GetValue(value);
 			}
 
-			public override void SetValue(object instance, object value)
+			public override void SetValue(SqliteHandler context, object instance, object value)
 			{
-				object objValue = LoadOne<object>(ValueType, value, IdFieldName, false);
+				object objValue = context.ReadOne(ValueType, value, IdFieldName, false);
 				if (objValue == null) return;
 
-				SetValue(instance, objValue);
+				SetValue(context, instance, objValue);
 			}
 		}
 	}

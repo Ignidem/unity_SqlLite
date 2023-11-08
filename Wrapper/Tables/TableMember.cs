@@ -3,11 +3,10 @@ using System;
 using System.Linq;
 using System.Reflection;
 using Utilities.Conversions;
-using Utilities.Reflection;
 
 namespace SqlLite.Wrapper
 {
-	public static partial class SqliteHandler
+	public partial class SqliteHandler
 	{
 		private class TableMember
 		{
@@ -94,7 +93,7 @@ namespace SqlLite.Wrapper
 				nonSerialized = member.GetCustomAttribute<NonSerializedAttribute>();
 			}
 
-			public virtual object GetValue(object instance)
+			public virtual object GetValue(SqliteHandler context, object instance)
 			{
 				object value = GetRealValue(instance);
 
@@ -106,7 +105,7 @@ namespace SqlLite.Wrapper
 				return isField ? field.GetValue(instance) : prop.GetValue(instance);
 			}
 
-			public virtual void SetValue(object instance, object value)
+			public virtual void SetValue(SqliteHandler context, object instance, object value)
 			{
 				if (!CanWrite) return;
 
