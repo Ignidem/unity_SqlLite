@@ -1,5 +1,7 @@
 ﻿using Mono.Data.Sqlite;
 using System;
+using System.Collections.Generic;
+using System.Data.Common;
 using System.Threading.Tasks;
 
 namespace SqlLite.Wrapper
@@ -7,6 +9,46 @@ namespace SqlLite.Wrapper
 
 	public partial class SqliteHandler
 	{
+		public async Task<int> SaveManyAsync<T, I>(IEnumerable<T> entries)
+			where T : ISqlTable<I>
+		{
+			Type type = typeof(T);
+			TableInfo table = await GetTableInfoAsync(type);
+			using SqliteContext context = await CreateContext().OpenAsync();
+
+			int? aId = table.idAutoIncr?.GetNextIndex(this);
+
+			SqliteCommand command = context.CreateCommand(table.save);
+			command.Parameters.AddWithValue(table.identifier.Name, null);
+			TableMember[] fields = table.fields;
+			for (int i = 0; i < fields.Length; i++)
+				command.Parameters.AddWithValue(fields[i].Name, null);
+
+			int ops = 0;
+			foreach(var entry in entries)
+			{
+				I id = entry.Id;
+
+				if (aId is not null)
+				{
+					id = entry.Id = (I)(object)aId;
+					aId++;
+				}
+
+				command.Parameters[table.identifier.Name].Value = id;
+
+				for (int i = 0; i < fields.Length; i++)
+				{
+					TableMember field = fields[i];
+					command.Parameters[field.Name].Value = field.GetValue(this, entry);
+				}
+
+				ops += await command.ExecuteNonQueryAsync();
+			}
+
+			return ops;
+		}
+
 		public async Task<int> SaveAsync<T>(ISqlTable<T> entry)
 		{
 			Type type = entry.GetType();

@@ -26,11 +26,24 @@ namespace SqlLite.Wrapper
 			return indexer.Index;
 		}
 
+		public static void SetIncrement(SqliteHandler handler, string name, int value)
+		{
+			const string id = nameof(__AutoIncrementIndexes.Id);
+			__AutoIncrementIndexes indexer = handler.ReadOne<__AutoIncrementIndexes>(name, id, true);
+			indexer.Index = value;
+			indexer.SaveEntry();
+		}
+
 		private string table;
 
 		public int GetNextIndex(SqliteHandler handler)
 		{
 			return GetNextIndex(handler, table);
+		}
+
+		public void SetNextIndex(SqliteHandler handler, int value)
+		{
+			SetIncrement(handler, table, value);
 		}
 
 		internal void SetType(Type type)
