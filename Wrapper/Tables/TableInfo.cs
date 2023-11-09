@@ -139,8 +139,8 @@ namespace SqlLite.Wrapper
 
 			private async Task VerifyColumns(SqliteHandler handler)
 			{
-				using SqliteCommand cmd = handler.CreateQuery($"PRAGMA table_info({name})");
-				using DbDataReader reader = await cmd.ExecuteReaderAsync();
+				using SqliteContext context = await handler.CreateContext().OpenAsync();
+				DbDataReader reader = await context.QueryReaderAsync($"PRAGMA table_info({name})");
 
 				if (!reader.Read())
 				{
@@ -187,35 +187,25 @@ namespace SqlLite.Wrapper
 					await RemoveColumn(handler, column.Key);
 				}
 			}
-
-			private Task CreateTable(SqliteHandler handler)
-			{
-				using SqliteCommand cmd = handler.CreateQuery(create);
-				return cmd.ExecuteNonQueryAsync();
-			}
-
+			private Task CreateTable(SqliteHandler handler) => handler.ExecuteQueryAsync(create);
 			private async Task AlterColumnType(SqliteHandler handler, string name, Type type)
 			{
 				await RemoveColumn(handler, name);
 				await AddColumn(handler, name, type);
 			}
-
 			private Task AddColumn(SqliteHandler handler, string name, Type type)
 			{
-				using var cmd = handler.CreateQuery(string.Format(addFormat, this.name, name, SqlType(type)));
-				return cmd.ExecuteNonQueryAsync();
+				return handler.ExecuteQueryAsync(string.Format(addFormat, this.name, name, SqlType(type)));
 			}
-
 			private Task RemoveColumn(SqliteHandler handler, string name)
 			{
-				using var cmd = handler.CreateQuery(string.Format(removeFormat, this.name, name));
-				return cmd.ExecuteNonQueryAsync();
+				return handler.ExecuteQueryAsync(string.Format(removeFormat, this.name, name));
 			}
 
 			private void VerifyColumnsSync(SqliteHandler handler)
 			{
-				using SqliteCommand cmd = handler.CreateQuery($"PRAGMA table_info({name})");
-				using DbDataReader reader = cmd.ExecuteReader();
+				using SqliteContext context = handler.CreateContext().Open();
+				DbDataReader reader = context.QueryReader($"PRAGMA table_info({name})");
 
 				if (!reader.Read())
 				{
@@ -262,29 +252,19 @@ namespace SqlLite.Wrapper
 					RemoveColumnSync(handler, column.Key);
 				}
 			}
-
-			private void CreateTableSync(SqliteHandler handler)
-			{
-				using SqliteCommand cmd = handler.CreateQuery(create);
-				cmd.ExecuteNonQuery();
-			}
-
+			private void CreateTableSync(SqliteHandler handler) => handler.ExecuteQuery(create);
 			private void AlterColumnTypeSync(SqliteHandler handler, string name, Type type)
 			{
 				RemoveColumnSync(handler, name);
 				AddColumnSync(handler, name, type);
 			}
-
 			private void AddColumnSync(SqliteHandler handler, string name, Type type)
 			{
-				using SqliteCommand cmd = handler.CreateQuery(string.Format(addFormat, this.name, name, SqlType(type)));
-				cmd.ExecuteNonQuery();
+				handler.ExecuteQuery(string.Format(addFormat, this.name, name, SqlType(type)));
 			}
-
 			private void RemoveColumnSync(SqliteHandler handler, string name)
 			{
-				using SqliteCommand cmd = handler.CreateQuery(string.Format(removeFormat, this.name, name));
-				cmd.ExecuteNonQuery();
+				handler.ExecuteQuery(string.Format(removeFormat, this.name, name));
 			}
 		}
 	}

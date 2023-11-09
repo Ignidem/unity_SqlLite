@@ -11,8 +11,8 @@ namespace SqlLite.Wrapper
 			Type type = entry.GetType();
 			if (!await ExistsAsync(type.Name, "table")) return 0;
 
-			using SqliteCommand cmd = DeleteCommand(entry);
-			return cmd == null ? 0 : await cmd.ExecuteNonQueryAsync();
+			using SqliteContext context = await CreateContext().OpenAsync();
+			return await DeleteCommand(context, entry).ExecuteNonQueryAsync();
 		}
 
 		public int Delete<T>(ISqlTable<T> entry)
@@ -20,21 +20,21 @@ namespace SqlLite.Wrapper
 			Type type = entry.GetType();
 			if (!Exists(type.Name, "table")) return 0;
 
-			using SqliteCommand cmd = DeleteCommand(entry);
-			return cmd == null ? 0 : cmd.ExecuteNonQuery();
+			using SqliteContext context = CreateContext().Open();
+			return DeleteCommand(context, entry).ExecuteNonQuery();
 		}
 
-		private SqliteCommand DeleteCommand<T>(ISqlTable<T> entry)
+		private SqliteCommand DeleteCommand<T>(SqliteContext context, ISqlTable<T> entry)
 		{
 			Type type = entry.GetType();
-			SqliteCommand cmd = CreateQuery($"DELETE FROM {type.Name} WHERE Id=@Id");
-			cmd.Parameters.Add(new SqliteParameter
+			SqliteCommand command = context.CreateCommand($"DELETE FROM {type.Name} WHERE Id=@Id");
+			command.Parameters.Add(new SqliteParameter
 			{
 				ParameterName = "Id",
 				Value = entry.Id
 			});
 
-			return cmd;
+			return command;
 		}
 	}
 }

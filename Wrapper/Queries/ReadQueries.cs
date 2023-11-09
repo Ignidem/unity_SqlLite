@@ -8,16 +8,28 @@ namespace SqlLite.Wrapper
 {
 	public partial class SqliteHandler
 	{
-		public async Task<T> ReadAsync<T>(string query, Action<SqliteCommand> commandFormatter)
+		private static SqliteCommand ReadCommand(SqliteContext context, TableInfo table, string keyname, object key)
+		{
+			SqliteCommand command = context.CreateCommand(string.Format(table.select, keyname));
+			command.Parameters.Add(new SqliteParameter()
+			{
+				ParameterName = "Id",
+				Value = key
+			});
+			return command;
+		}
+
+		public async Task<T> ReadOneAsync<T>(string query, Action<SqliteCommand> commandFormatter)
 		{
 			Type type = typeof(T);
 			TableInfo table = await GetTableInfoAsync(type);
 			T entry = table.ConstructEmpty<T>();
 
-			using SqliteCommand cmd = CreateQuery(query);
-			commandFormatter(cmd);
-			using DbDataReader reader = await cmd.ExecuteReaderAsync();
-				
+			using SqliteContext context = await CreateContext().OpenAsync();
+			SqliteCommand command = context.CreateCommand(query);
+			commandFormatter(command);
+			DbDataReader reader = await context.ReaderAsync(command);
+			
 			if (!await reader.ReadAsync()) return default;
 
 			ReadEntry(entry, table, reader);
@@ -29,9 +41,10 @@ namespace SqlLite.Wrapper
 			TableInfo table = await GetTableInfoAsync(type);
 			List<T> entries = new List<T>();
 
-			using SqliteCommand cmd = CreateQuery(query);
-			commandFormatter?.Invoke(cmd);
-			using DbDataReader reader = await cmd.ExecuteReaderAsync();
+			using SqliteContext context = await CreateContext().OpenAsync();
+			SqliteCommand command = context.CreateCommand(query);
+			commandFormatter?.Invoke(command);
+			DbDataReader reader = await context.ReaderAsync(command);
 
 			while (await reader.ReadAsync())
 			{
@@ -42,20 +55,14 @@ namespace SqlLite.Wrapper
 
 			return entries.ToArray();
 		}
-		public async Task<T> ReadOneAsync<T>(object id, string keyname = "Id", bool createIfNone = false)
+		public async Task<T> ReadOneAsync<T>(object key, string keyname = "Id", bool createIfNone = false)
 		{
 			TableInfo table = await GetTableInfoAsync(typeof(T));
 			T entry = table.ConstructEmpty<T>();
 
-			using SqliteCommand cmd = CreateQuery(string.Format(table.select, keyname));
-
-			cmd.Parameters.Add(new SqliteParameter
-			{
-				ParameterName = "Id",
-				Value = id
-			});
-
-			using DbDataReader reader = await cmd.ExecuteReaderAsync();
+			using SqliteContext context = await CreateContext().OpenAsync();
+			SqliteCommand command = ReadCommand(context, table, keyname, key);
+			DbDataReader reader = await context.ReaderAsync(command);
 
 			if (!await reader.ReadAsync())
 			{
@@ -74,15 +81,10 @@ namespace SqlLite.Wrapper
 			TableInfo table = GetTableInfo(typeof(T));
 			List<T> entries = new List<T>();
 
-			string query = $"select * from {table.name} where {keyname}=@Id";
-			using SqliteCommand cmd = CreateQuery(query);
-			cmd.Parameters.Add(new SqliteParameter()
-			{
-				ParameterName = "Id",
-				Value = key
-			});
+			using SqliteContext context = CreateContext().Open();
+			SqliteCommand command = ReadCommand(context, table, keyname, key);
 
-			using DbDataReader reader = cmd.ExecuteReader();
+			DbDataReader reader = context.Reader(command);
 
 			while (reader.Read())
 			{
@@ -93,6 +95,7 @@ namespace SqlLite.Wrapper
 
 			return entries.ToArray();
 		}
+
 		public T ReadOne<T>(object id, string keyname = "Id", bool createIfNone = false)
 		{
 			TableInfo table = GetTableInfo(typeof(T));
@@ -107,16 +110,12 @@ namespace SqlLite.Wrapper
 
 			return ReadOne(id, keyname, createIfNone, table, entry);
 		}
-		private T ReadOne<T>(object id, string keyname, bool createIfNone, TableInfo table, T entry)
+		private T ReadOne<T>(object key, string keyname, bool createIfNone, TableInfo table, T entry)
 		{
-			using var cmd = CreateQuery(string.Format(table.select, keyname));
-			cmd.Parameters.Add(new SqliteParameter
-			{
-				ParameterName = "Id",
-				Value = id
-			});
+			using SqliteContext context = CreateContext().Open();
+			SqliteCommand command = ReadCommand(context, table, keyname, key);
+			DbDataReader reader = context.Reader(command);
 
-			using var reader = cmd.ExecuteReader();
 			if (reader.Read())
 			{
 				ReadEntry(entry, table, reader);
@@ -125,7 +124,8 @@ namespace SqlLite.Wrapper
 
 			if (!createIfNone)
 				return default;
-				
+
+			table.identifier.SetValue(this, entry, key);
 			if (entry is ISqlTable sqlTab)
 				sqlTab.Save();
 
