@@ -1,5 +1,4 @@
-﻿using System.Data.Common;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace SqlLite.Wrapper
 {
@@ -7,10 +6,7 @@ namespace SqlLite.Wrapper
 	{
 		public async Task BeginTransactionAsync()
 		{
-			if (uContext != null)
-			{
-				throw new System.Exception("There is already a connection active.");
-			}
+			if (uContext != null) return;
 
 			uContext = await CreateContext().OpenAsync();
 			uContext.PreventDisposal();
@@ -25,8 +21,18 @@ namespace SqlLite.Wrapper
 			uContext = null;
 
 			context.AllowDisposal();
-			DbTransaction trans = context.GetModule<DbTransaction>();
-			await trans.CommitAsync();
+			await context.CommitAsync();
+		}
+
+		public async Task RollbackAsync()
+		{
+			if (uContext == null) return;
+
+			using SqliteContext context = uContext;
+			uContext = null;
+
+			context.AllowDisposal();
+			await context.RollbackAsync();
 		}
 	}
 }

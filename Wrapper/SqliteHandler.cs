@@ -8,12 +8,18 @@ using UnityEngine;
 
 namespace SqlLite.Wrapper
 {
+	public delegate void CommandExecutedDelegate(SqliteCommand command, int operations, object context);
+	public delegate void ExceptionDelegate(Exception exception, SqliteContext context, object target);
+
 	public partial class SqliteHandler : IDisposable
 	{
 		public const string PathPrefix = "URI=file:";
 
 		private static readonly string defaultPath = PathPrefix + Application.persistentDataPath + "/sqlite.db";
-		
+
+		public event CommandExecutedDelegate OnCommandExecuted;
+		public event ExceptionDelegate OnException;
+
 		private readonly Dictionary<Guid, SqliteContext> connections = new Dictionary<Guid, SqliteContext>();
 		private readonly string path;
 		private SqliteContext uContext;
@@ -68,6 +74,28 @@ namespace SqlLite.Wrapper
 				TableMember field = fields[i];
 				if (values.TryGetValue(field.Name, out v))
 					field.SetValue(this, entry, v);
+			}
+
+			if (values.TryGetValue(table.identifier.Name, out v))
+			{
+				table.identifier.SetValue(this, entry, v);
+			}
+
+			if (entry is IOnDeserialized deserialized)
+				deserialized.OnFinishRead();
+		}
+
+		private async Task ReadEntryAsync(object entry, TableInfo table, DbDataReader reader)
+		{
+			Dictionary<string, object> values = GetColumnValues(reader);
+
+			TableMember[] fields = table.fields;
+			object v;
+			for (int i = 0; i < fields.Length; i++)
+			{
+				TableMember field = fields[i];
+				if (values.TryGetValue(field.Name, out v))
+					await field.SetValueAsync(this, entry, v);
 			}
 
 			if (values.TryGetValue(table.identifier.Name, out v))

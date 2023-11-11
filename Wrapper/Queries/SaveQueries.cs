@@ -6,93 +6,126 @@ using System.Threading.Tasks;
 
 namespace SqlLite.Wrapper
 {
-
 	public partial class SqliteHandler
 	{
 		public async Task<int> SaveManyAsync<T, I>(IEnumerable<T> entries)
 			where T : ISqlTable<I>
 		{
-			Type type = typeof(T);
-			TableInfo table = await GetTableInfoAsync(type);
 			using SqliteContext context = await CreateContext().OpenAsync();
-
-			int? aId = table.idAutoIncr?.GetNextIndex(this);
-
-			SqliteCommand command = context.CreateCommand(table.save);
-			command.Parameters.AddWithValue(table.identifier.Name, null);
-			TableMember[] fields = table.fields;
-			for (int i = 0; i < fields.Length; i++)
-				command.Parameters.AddWithValue(fields[i].Name, null);
-
-			int ops = 0;
-			foreach(var entry in entries)
+			object _target = null;
+			try
 			{
-				I id = entry.Id;
+				Type type = typeof(T);
+				TableInfo table = await GetTableInfoAsync(type);
 
-				if (aId is not null)
-				{
-					id = entry.Id = (I)(object)aId;
-					aId++;
-				}
+				int? aId = table.idAutoIncr == null ? null : await table.idAutoIncr.GetNextIndexAsync(this);
 
-				command.Parameters[table.identifier.Name].Value = id;
-
+				SqliteCommand command = context.CreateCommand(table.save);
+				command.Parameters.AddWithValue(table.identifier.Name, null);
+				TableMember[] fields = table.fields;
 				for (int i = 0; i < fields.Length; i++)
+					command.Parameters.AddWithValue(fields[i].Name, null);
+
+				int ops = 0;
+				foreach (T entry in entries)
 				{
-					TableMember field = fields[i];
-					command.Parameters[field.Name].Value = field.GetValue(this, entry);
+					_target = entry;
+					I id = entry.Id;
+
+					if (aId is not null)
+					{
+						id = entry.Id = (I)(object)aId;
+						aId++;
+					}
+
+					command.Parameters[table.identifier.Name].Value = id;
+
+					for (int i = 0; i < fields.Length; i++)
+					{
+						TableMember field = fields[i];
+						object v = await field.GetValueAsync(this, entry);
+						command.Parameters[field.Name].Value = v;
+					}
+
+					int operations = await command.ExecuteNonQueryAsync();
+					OnCommandExecuted(command, operations, entry);
+					ops += operations;
 				}
 
-				ops += await command.ExecuteNonQueryAsync();
-			}
+				if (table.idAutoIncr != null)
+					await table.idAutoIncr.SetNextIndexAsync(this, aId.Value);
 
-			return ops;
+				return ops;
+
+			}
+			catch (Exception e)	
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
 		}
 
 		public async Task<int> SaveAsync<T>(ISqlTable<T> entry)
 		{
-			Type type = entry.GetType();
-			TableInfo table = await GetTableInfoAsync(type);
 			using SqliteContext context = await CreateContext().OpenAsync();
-			SqliteCommand cmd = SaveCommand(context, table, entry);
-			return await cmd.ExecuteNonQueryAsync();
+			object _target = entry;
+			try
+			{
+				Type type = entry.GetType();
+				TableInfo table = await GetTableInfoAsync(type);
+
+				if (table.idAutoIncr != null && entry.Id.Equals(default))
+					await table.identifier.SetValueAsync(this, entry, await table.idAutoIncr.GetNextIndexAsync(this));
+
+				SqliteCommand command = context.CreateCommand(table.save);
+				command.Parameters.AddWithValue(table.identifier.Name, entry.Id);
+
+				TableMember[] fields = table.fields;
+
+				for (int i = 0; i < fields.Length; i++)
+					command.Parameters.Add(await fields[i].GetParameterAsync(this, entry));
+
+				int ops = await command.ExecuteNonQueryAsync();
+				OnCommandExecuted(command, ops, _target);
+				return ops;
+
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
 		}
 
 		public int Save<T>(ISqlTable<T> entry)
 		{
-			Type type = entry.GetType();
-			TableInfo table = GetTableInfo(type); 
 			using SqliteContext context = CreateContext().Open();
-			using SqliteCommand cmd = SaveCommand(context, table, entry);
-			return cmd.ExecuteNonQuery();
-		}
-
-		private SqliteCommand SaveCommand<T>(SqliteContext context, TableInfo table, ISqlTable<T> entry)
-		{
-			if (table.idAutoIncr != null)
-				entry.Id = table.AutoIncrementIndex(entry, entry.Id);
-
-			SqliteCommand command = context.CreateCommand(table.save);
-			command.Parameters.Add(new SqliteParameter
+			object _target = entry;
+			try
 			{
-				ParameterName = table.identifier.Name,
-				Value = entry.Id
-			});
+				Type type = entry.GetType();
+				TableInfo table = GetTableInfo(type);
 
-			TableMember[] fields = table.fields;
+				if (table.idAutoIncr != null && entry.Id.Equals(default))
+					table.identifier.SetValue(this, entry, table.idAutoIncr.GetNextIndex(this));
 
-			for (int i = 0; i < fields.Length; i++)
-			{
-				TableMember field = fields[i];
+				SqliteCommand command = context.CreateCommand(table.save);
+				command.Parameters.AddWithValue(table.identifier.Name, entry.Id);
 
-				command.Parameters.Add(new SqliteParameter
-				{
-					ParameterName = field.Name,
-					Value = field.GetValue(this, entry)
-				});
+				TableMember[] fields = table.fields;
+
+				for (int i = 0; i < fields.Length; i++)
+					command.Parameters.Add(fields[i].GetParameter(this, entry));
+
+				int ops = command.ExecuteNonQuery();
+				OnCommandExecuted(command, ops, _target);
+				return ops;
 			}
-
-			return command;
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
 		}
 	}
 }

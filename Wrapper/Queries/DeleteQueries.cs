@@ -8,20 +8,45 @@ namespace SqlLite.Wrapper
 	{
 		public async Task<int> DeleteAsync<T>(ISqlTable<T> entry)
 		{
-			Type type = entry.GetType();
-			if (!await ExistsAsync(type.Name, "table")) return 0;
-
 			using SqliteContext context = await CreateContext().OpenAsync();
-			return await DeleteCommand(context, entry).ExecuteNonQueryAsync();
+			object _target = entry;
+			try
+			{
+				Type type = entry.GetType();
+				if (!await ExistsAsync(type.Name, "table")) return 0;
+
+				SqliteCommand command = DeleteCommand(context, entry);
+				int ops = await command.ExecuteNonQueryAsync();
+
+				OnCommandExecuted(command, ops, _target);
+				return ops;
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
 		}
 
 		public int Delete<T>(ISqlTable<T> entry)
 		{
-			Type type = entry.GetType();
-			if (!Exists(type.Name, "table")) return 0;
-
 			using SqliteContext context = CreateContext().Open();
-			return DeleteCommand(context, entry).ExecuteNonQuery();
+			object _target = null;
+			try
+			{
+				Type type = entry.GetType();
+				if (!Exists(type.Name, "table")) return 0;
+
+				SqliteCommand command = DeleteCommand(context, entry);
+				int ops = command.ExecuteNonQuery();
+				OnCommandExecuted(command, ops, _target);
+				return ops;
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
 		}
 
 		private SqliteCommand DeleteCommand<T>(SqliteContext context, ISqlTable<T> entry)

@@ -1,7 +1,9 @@
-﻿using SqlLite.Wrapper.Serialization;
+﻿using Mono.Data.Sqlite;
+using SqlLite.Wrapper.Serialization;
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Utilities.Conversions;
 
 namespace SqlLite.Wrapper
@@ -52,7 +54,7 @@ namespace SqlLite.Wrapper
 					return new TableMember(member);
 
 				if (IsForeignReference(type, out Type table))
-					return new TableForeignMember(member, table);
+					return new ForeignTableMember(member, table);
 
 				return null;
 			}
@@ -93,16 +95,24 @@ namespace SqlLite.Wrapper
 				nonSerialized = member.GetCustomAttribute<NonSerializedAttribute>();
 			}
 
-			public virtual object GetValue(SqliteHandler context, object instance)
+			public SqliteParameter GetParameter(SqliteHandler context, object instance)
 			{
-				object value = GetRealValue(instance);
-
-				return value;
+				return new SqliteParameter(Name, GetValue(context, instance));
 			}
 
-			protected object GetRealValue(object instance)
+			public async Task<SqliteParameter> GetParameterAsync(SqliteHandler context, object instance)
+			{
+				return new SqliteParameter(Name, await GetValueAsync(context, instance));
+			}
+
+			public virtual object GetValue(SqliteHandler context, object instance)
 			{
 				return isField ? field.GetValue(instance) : prop.GetValue(instance);
+			}
+
+			public virtual Task<object> GetValueAsync(SqliteHandler context, object instance)
+			{
+				return Task.FromResult(GetValue(context, instance));
 			}
 
 			public virtual void SetValue(SqliteHandler context, object instance, object value)
@@ -120,6 +130,11 @@ namespace SqlLite.Wrapper
 
 				if (isField) field.SetValue(instance, value);
 				else prop.SetValue(instance, value);
+			}
+			public virtual Task SetValueAsync(SqliteHandler context, object instance, object value)
+			{
+				SetValue(context, instance, value);
+				return Task.CompletedTask;
 			}
 
 			public override string ToString()

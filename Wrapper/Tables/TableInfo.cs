@@ -1,9 +1,7 @@
-﻿using Mono.Data.Sqlite;
-using SqlLite.Wrapper.Attributes;
+﻿using SqlLite.Wrapper.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -100,21 +98,6 @@ namespace SqlLite.Wrapper
 				}
 
 				return (T)emptyConstr.Invoke(null);
-			}
-
-			public I AutoIncrementIndex<I>(ISqlTable<I> entry, I id)
-			{
-				if (id is not int i)
-				{
-					throw new Exception("Cannot auto increment non integer Id for " + type.Name);
-				}
-
-				//id was already previously set;
-				if (i != 0) return id;
-				
-				object index = idAutoIncr.GetNextIndex(entry.Handler);
-				identifier.SetValue(entry.Handler, entry, index);
-				return (I)index;
 			}
 
 			public async Task VerifyTable(SqliteHandler handler)

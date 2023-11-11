@@ -21,79 +21,180 @@ namespace SqlLite.Wrapper
 
 		public async Task<T> ReadOneAsync<T>(string query, Action<SqliteCommand> commandFormatter)
 		{
-			Type type = typeof(T);
-			TableInfo table = await GetTableInfoAsync(type);
-			T entry = table.ConstructEmpty<T>();
+			using SqliteContext context = await CreateContext().OpenAsync(); 
+			object _target = null;
+			try
+			{
+				Type type = typeof(T);
+				TableInfo table = await GetTableInfoAsync(type);
+				T entry = table.ConstructEmpty<T>();
+				_target = entry;
+				SqliteCommand command = context.CreateCommand(query);
+				commandFormatter(command);
+				DbDataReader reader = await context.ReaderAsync(command);
 
-			using SqliteContext context = await CreateContext().OpenAsync();
-			SqliteCommand command = context.CreateCommand(query);
-			commandFormatter(command);
-			DbDataReader reader = await context.ReaderAsync(command);
-			
-			if (!await reader.ReadAsync()) return default;
+				if (!await reader.ReadAsync()) return default;
 
-			ReadEntry(entry, table, reader);
-			return entry;
+				await ReadEntryAsync(entry, table, reader);
+				OnCommandExecuted(command, 1, entry);
+				return entry;
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
 		}
 		public async Task<T[]> ReadAllAsync<T>(string query, Action<SqliteCommand> commandFormatter = null)
 		{
-			Type type = typeof(T);
-			TableInfo table = await GetTableInfoAsync(type);
-			List<T> entries = new List<T>();
-
-			using SqliteContext context = await CreateContext().OpenAsync();
-			SqliteCommand command = context.CreateCommand(query);
-			commandFormatter?.Invoke(command);
-			DbDataReader reader = await context.ReaderAsync(command);
-
-			while (await reader.ReadAsync())
+			using SqliteContext context = await CreateContext().OpenAsync(); 
+			object _target = null;
+			try
 			{
-				T entry = table.ConstructEmpty<T>();
-				ReadEntry(entry, table, reader);
-				entries.Add(entry);
-			}
+				Type type = typeof(T);
+				TableInfo table = await GetTableInfoAsync(type);
+				List<T> entries = new List<T>();
 
-			return entries.ToArray();
+				SqliteCommand command = context.CreateCommand(query);
+				commandFormatter?.Invoke(command);
+				DbDataReader reader = await context.ReaderAsync(command);
+
+				while (await reader.ReadAsync())
+				{
+					T entry = table.ConstructEmpty<T>();
+					_target = entry;
+					await ReadEntryAsync(entry, table, reader);
+					entries.Add(entry);
+					OnCommandExecuted(command, 0, entry);
+				}
+
+				return entries.ToArray();
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
+		}
+		public async Task<T[]> ReadAllAsync<T>(object key, string keyname = "Id")
+		{
+			using SqliteContext context = await CreateContext().OpenAsync();
+			object _target = null;
+			try
+			{
+				Type type = typeof(T);
+				TableInfo table = await GetTableInfoAsync(type);
+				List<T> entries = new List<T>();
+
+				SqliteCommand command = ReadCommand(context, table, keyname, key);
+				DbDataReader reader = await context.ReaderAsync(command);
+
+				while (await reader.ReadAsync())
+				{
+					T entry = table.ConstructEmpty<T>();
+					_target = entry;
+					await ReadEntryAsync(entry, table, reader);
+					entries.Add(entry);
+					OnCommandExecuted(command, 1, entry);
+				}
+
+				return entries.ToArray();
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
 		}
 		public async Task<T> ReadOneAsync<T>(object key, string keyname = "Id", bool createIfNone = false)
 		{
-			TableInfo table = await GetTableInfoAsync(typeof(T));
-			T entry = table.ConstructEmpty<T>();
-
 			using SqliteContext context = await CreateContext().OpenAsync();
-			SqliteCommand command = ReadCommand(context, table, keyname, key);
-			DbDataReader reader = await context.ReaderAsync(command);
-
-			if (!await reader.ReadAsync())
+			object _target = null;
+			try
 			{
-				if (createIfNone && entry is ISqlTable sqlTab)
-					await sqlTab.SaveAsync();
-					
-				return default;
-			}
+				TableInfo table = await GetTableInfoAsync(typeof(T));
+				T entry = table.ConstructEmpty<T>();
+				_target = entry;
+				SqliteCommand command = ReadCommand(context, table, keyname, key);
+				DbDataReader reader = await context.ReaderAsync(command);
 
-			ReadEntry(entry, table, reader);
-			return entry;
+				if (!await reader.ReadAsync())
+				{
+					if (createIfNone && entry is ISqlTable sqlTab)
+						await sqlTab.SaveAsync();
+
+					return default;
+				}
+
+				await ReadEntryAsync(entry, table, reader);
+				OnCommandExecuted(command, 1, entry);
+				return entry;
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
+		}
+		public async Task<object> ReadOneAsync(Type type, object key, string keyname, bool createIfNone = false)
+		{
+			using SqliteContext context = await CreateContext().OpenAsync();
+			object _target = null;
+			try
+			{
+				TableInfo table = await GetTableInfoAsync(type);
+				object entry = _target = table.ConstructEmpty<object>();
+
+				SqliteCommand command = ReadCommand(context, table, keyname, key);
+				DbDataReader reader = await context.ReaderAsync(command);
+
+				if (!await reader.ReadAsync())
+				{
+					if (createIfNone && entry is ISqlTable sqlTab)
+						await sqlTab.SaveAsync();
+
+					return default;
+				}
+
+				await ReadEntryAsync(entry, table, reader);
+				OnCommandExecuted(command, 1, entry);
+				return entry;
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
 		}
 
 		public T[] ReadAll<T>(object key, string keyname)
 		{
-			TableInfo table = GetTableInfo(typeof(T));
-			List<T> entries = new List<T>();
-
 			using SqliteContext context = CreateContext().Open();
-			SqliteCommand command = ReadCommand(context, table, keyname, key);
-
-			DbDataReader reader = context.Reader(command);
-
-			while (reader.Read())
+			object _target = null;
+			try
 			{
-				T entry = table.ConstructEmpty<T>();
-				ReadEntry(entry, table, reader);
-				entries.Add(entry);
-			}
+				TableInfo table = GetTableInfo(typeof(T));
+				List<T> entries = new List<T>();
 
-			return entries.ToArray();
+				SqliteCommand command = ReadCommand(context, table, keyname, key);
+				DbDataReader reader = context.Reader(command);
+
+				while (reader.Read())
+				{
+					T entry = table.ConstructEmpty<T>();
+					_target = entry;
+					ReadEntry(entry, table, reader);
+					entries.Add(entry);
+					OnCommandExecuted(command, 1, entry);
+				}
+
+				return entries.ToArray();
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
 		}
 
 		public T ReadOne<T>(object id, string keyname = "Id", bool createIfNone = false)
@@ -113,23 +214,31 @@ namespace SqlLite.Wrapper
 		private T ReadOne<T>(object key, string keyname, bool createIfNone, TableInfo table, T entry)
 		{
 			using SqliteContext context = CreateContext().Open();
-			SqliteCommand command = ReadCommand(context, table, keyname, key);
-			DbDataReader reader = context.Reader(command);
-
-			if (reader.Read())
+			try
 			{
-				ReadEntry(entry, table, reader);
+				SqliteCommand command = ReadCommand(context, table, keyname, key);
+				DbDataReader reader = context.Reader(command);
+
+				if (reader.Read())
+				{
+					ReadEntry(entry, table, reader);
+					return entry;
+				}
+
+				if (!createIfNone)
+					return default;
+
+				table.identifier.SetValue(this, entry, key);
+				if (entry is ISqlTable sqlTab)
+					sqlTab.Save();
+				OnCommandExecuted(command, 1, entry);
 				return entry;
 			}
-
-			if (!createIfNone)
-				return default;
-
-			table.identifier.SetValue(this, entry, key);
-			if (entry is ISqlTable sqlTab)
-				sqlTab.Save();
-
-			return entry;
+			catch (Exception e)
+			{
+				OnException(e, context, entry);
+				throw e;
+			}
 		}
 	}
 }

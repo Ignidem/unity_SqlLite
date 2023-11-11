@@ -9,9 +9,7 @@ namespace SqlLite.Wrapper
 	public class SqliteContext : IDisposable, IAsyncDisposable
 	{
 		public readonly SqliteConnection connection;
-
 		private readonly List<IDisposable> modules = new();
-
 		private bool disposallocked;
 
 		public SqliteContext(SqliteConnection connection)
@@ -66,13 +64,29 @@ namespace SqlLite.Wrapper
 		#endregion
 
 		#region Transaction
-		public DbTransaction Begin() => AddModule(connection.BeginTransaction());
+		public DbTransaction Begin()
+		{
+			SqliteTransaction module = connection.BeginTransaction();
+			return AddModule(module); 
+		}
+
 		public async Task<DbTransaction> BeginAsync()
 		{
-			ValueTask<DbTransaction> valueTask = connection.BeginTransactionAsync();
-			DbTransaction module = await valueTask.AsTask();
-			return AddModule(module);
+			ValueTask<DbTransaction> value = connection.BeginTransactionAsync();
+			return AddModule(await value.AsTask());
 		}
+
+		public Task CommitAsync()
+		{
+			DbTransaction trans = GetModule<DbTransaction>();
+			return trans?.CommitAsync() ?? Task.CompletedTask;
+		}
+		public Task RollbackAsync() 
+		{
+			DbTransaction transaction = GetModule<DbTransaction>();
+			return transaction?.RollbackAsync() ?? Task.CompletedTask;
+		}
+
 		#endregion
 
 		#region Dispose
