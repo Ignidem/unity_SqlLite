@@ -8,7 +8,7 @@ namespace SqlLite.Wrapper
 {
 	public partial class SqliteHandler
 	{
-		public async Task<int> SaveManyAsync<T, I>(IEnumerable<T> entries)
+		public async Task<int> SaveManyAsync<T, I>(IEnumerable<T> entries, Action<T> onSaved = null)
 			where T : ISqlTable<I>
 		{
 			using SqliteContext context = await CreateContext().OpenAsync();
@@ -50,6 +50,7 @@ namespace SqlLite.Wrapper
 					int operations = await command.ExecuteNonQueryAsync();
 					OnCommandExecuted(command, operations, entry);
 					ops += operations;
+					onSaved?.Invoke(entry);
 				}
 
 				if (table.idAutoIncr != null)

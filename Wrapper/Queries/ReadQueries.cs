@@ -106,6 +106,51 @@ namespace SqlLite.Wrapper
 				throw e;
 			}
 		}
+		public async Task<T[]> ReadAllAsync<T>(string keyname = "Id", params object[] ids)
+		{
+			using SqliteContext context = await CreateContext().OpenAsync();
+			object _target = null;
+			try
+			{
+				Type type = typeof(T);
+				TableInfo table = await GetTableInfoAsync(type);
+				List<T> entries = new List<T>();
+				const string selectIn = "SELECT * FROM {0} WHERE {1} IN ({3})";
+
+				string idsParams = null;
+				SqliteCommand command = context.CreateCommand(null);
+				for(int i = 0; i < ids.Length; i++)
+				{
+					object key = ids[i];
+					string paramName = $"@Key{i}d";
+					idsParams += paramName;
+					if (i + 1 < ids.Length)
+						idsParams += ',';
+
+					command.Parameters.AddWithValue(paramName, key);
+				}
+
+				command.CommandText = string.Format(selectIn, table.name, keyname, idsParams);
+				DbDataReader reader = await context.ReaderAsync(command);
+
+				while (await reader.ReadAsync())
+				{
+					T entry = table.ConstructEmpty<T>();
+					_target = entry;
+					await ReadEntryAsync(entry, table, reader);
+					entries.Add(entry);
+					OnCommandExecuted(command, 1, entry);
+				}
+
+				return entries.ToArray();
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
+		}
+
 		public async Task<T> ReadOneAsync<T>(object key, string keyname = "Id", bool createIfNone = false)
 		{
 			using SqliteContext context = await CreateContext().OpenAsync();
