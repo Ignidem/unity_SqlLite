@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Utilities.Conversions;
+using Utilities.Reflection;
 
 namespace SqlLite.Wrapper
 {
@@ -12,27 +13,38 @@ namespace SqlLite.Wrapper
 	{
 		private class TableMember
 		{
-			private static bool IsForeignReference(Type type, out Type table)
+			private static bool IsForeignReference(Type fieldType, string name, out Type table)
 			{
 				Type generic = typeof(ISqlTable<>);
-				table = type.GetInterfaces()
+				table = fieldType.GetInterfaces()
 					.FirstOrDefault(t => t.IsGenericType && t.GetGenericTypeDefinition() == generic);
 
 				bool isSqlTable = table != null;
-				if (isSqlTable && type.IsInterface)
-					throw new Exception($"Interface type {type.Name} requires a serializer.");
+				if (!isSqlTable) return false;
 
-				return isSqlTable;
+				if (fieldType.IsInterface)
+				{
+					UnityEngine.Debug.LogWarning($"Interface member {name} requires a serializer.");
+					return false;
+				}
+				else if (fieldType.IsAbstract)
+				{
+					UnityEngine.Debug.LogWarning($"Abstract member {name} requires a serializer.");
+					return false;
+				}
+				else if (!IsTypeSupported(table.GetGenericArguments()[0]))
+				{
+					UnityEngine.Debug.LogWarning($"Unsuported Id Foreign Reference {name} requires a serializer.");
+					return false;
+				}
+
+				return true;
 			}
 
 			private static bool IsTypeSupported(Type type)
 			{
-				if (type.IsEnum)
-					type = Enum.GetUnderlyingType(type);
-
 				return type.IsPrimitive || type == typeof(string)
-					|| type == typeof(DateTime) || type == typeof(Guid)
-					;
+					|| type == typeof(Guid);
 			}
 
 			public static implicit operator TableMember(MemberInfo member)
@@ -50,20 +62,30 @@ namespace SqlLite.Wrapper
 				if (serializerAttribute?.IsValid ?? false)
 					return new SerializedTableMember(member, serializerAttribute);
 
+				if (SqlSerializerAttribute.DefaultSerializers.TryGet(type, out SqlSerializerAttribute seri))
+					return new SerializedTableMember(member, seri);
+
 				if (IsTypeSupported(type))
 					return new TableMember(member);
 
-				if (IsForeignReference(type, out Type table))
+				if (type.IsEnum)
+					return new EnumTableMember(type, member);
+
+				string name = member.DeclaringType.Name + '.' + member.Name;
+
+				if (IsForeignReference(type, name, out Type table))
 					return new ForeignTableMember(member, table);
 
 				return null;
 			}
 
 			public string Name => isField ? field.Name : prop.Name;
-			public Type ValueType => isField ? field.FieldType : prop.PropertyType;
+			public Type FieldType => isField ? field.FieldType : prop.PropertyType;
+			public virtual Type SerializedType => FieldType;
 			public MemberInfo Member => isField ? field : prop;
 
 			public bool IsNotSerializable => !CanRead || nonSerialized != null;
+			public bool IsBackingField => field != null && field.IsBackingField();
 
 			public bool CanRead => isField || prop.GetMethod != null;
 			public bool CanWrite => isField || prop.SetMethod != null;
@@ -122,11 +144,8 @@ namespace SqlLite.Wrapper
 				if (value?.GetType() == typeof(DBNull))
 					value = null;
 
-				if (value != null)
-				{
-					value.TryConvertTo(ValueType, out object v);
+				if (value != null && value.TryConvertTo(FieldType, out object v))
 					value = v;
-				}
 
 				if (isField) field.SetValue(instance, value);
 				else prop.SetValue(instance, value);
@@ -138,7 +157,7 @@ namespace SqlLite.Wrapper
 			}
 
 			public override string ToString()
-			 => $"{Parent.Name}.{Name} ({ValueType.Name})";
+			 => $"{Parent.Name}.{Name} ({FieldType.Name})";
 		}
 	}
 }

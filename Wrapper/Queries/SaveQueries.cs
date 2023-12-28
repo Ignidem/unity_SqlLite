@@ -30,14 +30,14 @@ namespace SqlLite.Wrapper
 				foreach (T entry in entries)
 				{
 					_target = entry;
-					I id = entry.Id;
 
 					if (aId is not null)
 					{
-						id = entry.Id = (I)(object)aId;
+						entry.Id = (I)(object)aId;
 						aId++;
 					}
 
+					object id = table.identifier.GetValue(this, entry);
 					command.Parameters[table.identifier.Name].Value = id;
 
 					for (int i = 0; i < fields.Length; i++)
@@ -57,7 +57,6 @@ namespace SqlLite.Wrapper
 					await table.idAutoIncr.SetNextIndexAsync(this, aId.Value);
 
 				return ops;
-
 			}
 			catch (Exception e)	
 			{
@@ -79,7 +78,7 @@ namespace SqlLite.Wrapper
 					await table.identifier.SetValueAsync(this, entry, await table.idAutoIncr.GetNextIndexAsync(this));
 
 				SqliteCommand command = context.CreateCommand(table.save);
-				command.Parameters.AddWithValue(table.identifier.Name, entry.Id);
+				command.Parameters.Add(await table.identifier.GetParameterAsync(this, entry));
 
 				TableMember[] fields = table.fields;
 
@@ -89,7 +88,6 @@ namespace SqlLite.Wrapper
 				int ops = await command.ExecuteNonQueryAsync();
 				OnCommandExecuted(command, ops, _target);
 				return ops;
-
 			}
 			catch (Exception e)
 			{
@@ -111,7 +109,7 @@ namespace SqlLite.Wrapper
 					table.identifier.SetValue(this, entry, table.idAutoIncr.GetNextIndex(this));
 
 				SqliteCommand command = context.CreateCommand(table.save);
-				command.Parameters.AddWithValue(table.identifier.Name, entry.Id);
+				command.Parameters.Add(table.identifier.GetParameter(this, entry));
 
 				TableMember[] fields = table.fields;
 

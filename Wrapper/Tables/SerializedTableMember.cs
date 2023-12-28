@@ -1,4 +1,5 @@
 ﻿using SqlLite.Wrapper.Serialization;
+using System;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -9,6 +10,8 @@ namespace SqlLite.Wrapper
 		private class SerializedTableMember : TableMember
 		{
 			private readonly SqlSerializerAttribute attribute;
+			public override bool IsForeign => true;
+			public override Type SerializedType => attribute.Serializer.SerializedType;
 
 			public SerializedTableMember(MemberInfo member, SqlSerializerAttribute attribute) : base(member)
 			{

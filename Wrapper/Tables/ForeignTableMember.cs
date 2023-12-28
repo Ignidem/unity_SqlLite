@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
+using Utilities.Conversions;
 using Utilities.Reflection;
 
 namespace SqlLite.Wrapper
@@ -15,6 +16,7 @@ namespace SqlLite.Wrapper
 			private readonly Type IdType;
 
 			public override bool IsForeign => true;
+			public override Type SerializedType => IdType;
 
 			public ForeignTableMember(MemberInfo member, Type table) : base(member)
 			{
@@ -53,14 +55,14 @@ namespace SqlLite.Wrapper
 
 			public override void SetValue(SqliteHandler context, object instance, object value)
 			{
-				object objValue = context.ReadOne(ValueType, value, IdFieldName, false);
+				object objValue = context.ReadOne(FieldType, value, IdFieldName, false);
 				if (objValue == null) return;
 				base.SetValue(context, instance, objValue);
 			}
 
 			public override async Task SetValueAsync(SqliteHandler context, object instance, object value)
 			{
-				object objValue = await context.ReadOneAsync(ValueType, value, IdFieldName, false);
+				object objValue = await context.ReadOneAsync(FieldType, value, IdFieldName, false);
 				if (objValue == null) return;
 				await base.SetValueAsync(context, instance, objValue);
 			}

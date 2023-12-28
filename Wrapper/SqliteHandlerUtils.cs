@@ -79,7 +79,7 @@ namespace SqlLite.Wrapper
 						for (int j = 0; j < fields.Length; j++)
 						{
 							TableMember field = fields[j];
-							Type t = field.ValueType;
+							Type t = field.FieldType;
 
 							if (!entry.TryGetValue(field.Name, out object v)) v = GetDefault(t);
 							else if (!v.GetType().Equals(t))
@@ -133,7 +133,7 @@ namespace SqlLite.Wrapper
 			if (type == typeof(Guid))
 				return "BLOB";
 
-			return "TEXT";
+			throw new Exception($"{type.Name} is not a supported sqlite type.");
 		}
 
 		private static Dictionary<string, object> GetColumnValues(DbDataReader reader)

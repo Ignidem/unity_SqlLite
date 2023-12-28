@@ -1,9 +1,11 @@
 ﻿using SqlLite.Wrapper.Attributes;
+using SqlLite.Wrapper.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Reflection;
 using System.Threading.Tasks;
+using Utilities.Reflection;
 
 namespace SqlLite.Wrapper
 {
@@ -14,7 +16,7 @@ namespace SqlLite.Wrapper
 
 		private class TableInfo
 		{
-			private const BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.Instance;
+			private const BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 			public readonly string name;
 
 			public readonly TableMember identifier;
@@ -35,7 +37,7 @@ namespace SqlLite.Wrapper
 				this.type = type;
 				name = type.Name;
 
-				fields = LoadSerializableFields(type, ref identifier);
+				fields = LoadSerializableFields(ref identifier);
 
 				idAutoIncr = type.GetCustomAttribute<AutoIncrementAttribute>()
 					?? identifier?.Member.GetCustomAttribute<AutoIncrementAttribute>();
@@ -43,11 +45,16 @@ namespace SqlLite.Wrapper
 
 				triggers = type.GetCustomAttributes<TriggerAttribute>();
 
+				if (type.TryGetAttribute(out SqlSerializerAttribute serializer))
+				{
+					SqlSerializerAttribute.DefaultSerializers[type] = serializer;
+				}
+
 				select = $"SELECT * FROM {type.Name} WHERE {{0}} = @{identifier.Name}";
 
 				create = $"CREATE TABLE '{type.Name}' ("
-				+ $"'{identifier.Name}' {SqlType(identifier.ValueType)} PRIMARY KEY,"
-				+ JoinFields(",", fields, field => $" '{field.Name}' {SqlType(field.ValueType)}{HasIncrement(field.Member)}")
+				+ $"'{identifier.Name}' {SqlType(identifier.SerializedType)} PRIMARY KEY,"
+				+ JoinFields(",", fields, field => $" '{field.Name}' {SqlType(field.SerializedType)}{HasIncrement(field.Member)}")
 				+ ");";
 
 				save = "INSERT or REPLACE INTO " + $"{type.Name} " +
@@ -57,15 +64,18 @@ namespace SqlLite.Wrapper
 				emptyConstr = type.GetConstructor(new Type[0]);
 			}
 
-			private TableMember[] LoadSerializableFields(Type self, ref TableMember _id)
+			private TableMember[] LoadSerializableFields(ref TableMember _id)
 			{
-				List<MemberInfo> members = new List<MemberInfo>(self.GetFields(bindingFlags));
-				members.AddRange(self.GetProperties(bindingFlags));
+				List<MemberInfo> members = new List<MemberInfo>(type.GetFields(bindingFlags));
+				members.AddRange(type.GetProperties(bindingFlags));
 
 				List<TableMember> serialized = new List<TableMember>();
 				const string id_Name = nameof(ISqlTable<int>.Id);
 				for (int i = 0; i < members.Count; i++)
 				{
+					if (members[i] is FieldInfo field && field.IsBackingField())
+						continue;
+
 					TableMember member = members[i];
 
 					if (member == null || member.IsNotSerializable)
@@ -109,17 +119,6 @@ namespace SqlLite.Wrapper
 					await trigger.UpdateTrigger(handler);
 				}
 			}
-
-			public void VerifyTableSync(SqliteHandler handler)
-			{
-				VerifyColumnsSync(handler);
-
-				foreach (var trigger in triggers)
-				{
-					trigger.UpdateTriggerSync(handler);
-				}
-			}
-
 			private async Task VerifyColumns(SqliteHandler handler)
 			{
 				using SqliteContext context = await handler.CreateContext().OpenAsync();
@@ -157,12 +156,12 @@ namespace SqlLite.Wrapper
 					await AlterColumnType(handler, name, type);
 				}
 
-				await VerifyMember(identifier.Name, identifier.ValueType);
+				await VerifyMember(identifier.Name, identifier.SerializedType);
 
 				for (int i = 0; i < fields.Length; i++)
 				{
 					TableMember mem = fields[i];
-					await VerifyMember(mem.Name, mem.ValueType);
+					await VerifyMember(mem.Name, mem.SerializedType);
 				}
 
 				foreach (KeyValuePair<string, Dictionary<string, object>> column in data)
@@ -185,6 +184,15 @@ namespace SqlLite.Wrapper
 				return handler.ExecuteQueryAsync(string.Format(removeFormat, this.name, name));
 			}
 
+			public void VerifyTableSync(SqliteHandler handler)
+			{
+				VerifyColumnsSync(handler);
+
+				foreach (var trigger in triggers)
+				{
+					trigger.UpdateTriggerSync(handler);
+				}
+			}
 			private void VerifyColumnsSync(SqliteHandler handler)
 			{
 				using SqliteContext context = handler.CreateContext().Open();
@@ -222,12 +230,12 @@ namespace SqlLite.Wrapper
 					AlterColumnTypeSync(handler, name, type);
 				}
 
-				VerifyMember(identifier.Name, identifier.ValueType);
+				VerifyMember(identifier.Name, identifier.SerializedType);
 
 				for (int i = 0; i < fields.Length; i++)
 				{
 					TableMember mem = fields[i];
-					VerifyMember(mem.Name, mem.ValueType);
+					VerifyMember(mem.Name, mem.SerializedType);
 				}
 
 				foreach (KeyValuePair<string, Dictionary<string, object>> column in data)
