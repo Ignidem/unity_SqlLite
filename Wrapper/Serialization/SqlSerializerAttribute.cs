@@ -39,6 +39,7 @@ namespace SqlLite.Wrapper.Serialization
 				[typeof(Vector3Int)] = new SqlSerializerAttribute(typeof(Vector3IntSerializer)),
 				[typeof(Vector2)] = new SqlSerializerAttribute(typeof(Vector2Serializer)),
 				[typeof(Vector3)] = new SqlSerializerAttribute(typeof(Vector3Serializer)),
+				[typeof(Guid)] = new SqlSerializerAttribute(typeof(GuidSerializer)),
 			};
 
 			public bool TryGet(Type type, out SqlSerializerAttribute attr)

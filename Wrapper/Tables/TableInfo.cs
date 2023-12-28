@@ -23,9 +23,9 @@ namespace SqlLite.Wrapper
 
 			public readonly TableMember[] fields;
 
-			public readonly string create;
-			public readonly string select;
-			public readonly string save;
+			public string CreateQuery { get; private set; }
+			public string SelectQuery { get; private set; }
+			public string SaveQuery { get; private set; }
 
 			private readonly Type type;
 			private readonly ConstructorInfo emptyConstr;
@@ -50,18 +50,42 @@ namespace SqlLite.Wrapper
 					SqlSerializerAttribute.DefaultSerializers[type] = serializer;
 				}
 
-				select = $"SELECT * FROM {type.Name} WHERE {{0}} = @{identifier.Name}";
+				SelectQuery = $"SELECT * FROM {type.Name} WHERE {{0}} = @{identifier.Name}";
 
-				create = $"CREATE TABLE '{type.Name}' ("
-				+ $"'{identifier.Name}' {SqlType(identifier.SerializedType)} PRIMARY KEY,"
-				+ JoinFields(",", fields, field => $" '{field.Name}' {SqlType(field.SerializedType)}{HasIncrement(field.Member)}")
-				+ ");";
+				UpdateCreateTableQuery();
 
-				save = "INSERT or REPLACE INTO " + $"{type.Name} " +
-					$"(Id{JoinFields("", fields, f => $", '{f.Name}'")}) " +
-					$"VALUES (@{identifier.Name}{JoinFields("", fields, f => $", @{f.Name}")})";
+				UpdateSaveQuery();
 
 				emptyConstr = type.GetConstructor(new Type[0]);
+			}
+
+			private void UpdateSaveQuery()
+			{
+				const string saveFormat = "INSERT OR REPLACE INTO {0} (Id{2}) VALUES (@{1}{3});";
+				const string fieldFormat = ", '{0}'";
+				const string valueFormat = ", @{0}";
+				SaveQuery = string.Format(saveFormat, type.Name, identifier.Name, 
+					JoinFields("", fields, f => string.Format(fieldFormat, f.Name)),
+					JoinFields("", fields, f => string.Format(valueFormat, f.Name))
+					);
+			}
+
+			private void UpdateCreateTableQuery()
+			{
+				const string createFormat = "CREATE TABLE {0} ('{1}' {2} PRIMARYKEY{3});";
+				const string parameterFormat = ", '{0}' {1}{2}";
+
+				string FormatField(TableMember field)
+				{
+					string sqlType = SqlType(field.SerializedType);
+					string details = HasIncrement(field.Member);
+					return string.Format(parameterFormat, field.Name, sqlType, details);
+				}
+
+				CreateQuery = string.Format(createFormat, type.Name,
+					identifier.Name, SqlType(identifier.SerializedType),
+					JoinFields("", fields,  FormatField)
+				);
 			}
 
 			private TableMember[] LoadSerializableFields(ref TableMember _id)
@@ -146,8 +170,9 @@ namespace SqlLite.Wrapper
 						return;
 					}
 
-					string columnType = collumnInfo["type"].ToString();
-					if (columnType.Equals(SqlType(type), StringComparison.OrdinalIgnoreCase))
+					string columnType = collumnInfo["type"].ToString().Split(' ')[0];
+					string value = SqlType(type);
+					if (columnType.Equals(value, StringComparison.OrdinalIgnoreCase))
 					{
 						data.Remove(name);
 						return;
@@ -168,8 +193,11 @@ namespace SqlLite.Wrapper
 				{
 					await RemoveColumn(handler, column.Key);
 				}
+
+				UpdateCreateTableQuery();
+				UpdateSaveQuery();
 			}
-			private Task CreateTable(SqliteHandler handler) => handler.ExecuteQueryAsync(create);
+			private Task CreateTable(SqliteHandler handler) => handler.ExecuteQueryAsync(CreateQuery);
 			private async Task AlterColumnType(SqliteHandler handler, string name, Type type)
 			{
 				await RemoveColumn(handler, name);
@@ -243,7 +271,7 @@ namespace SqlLite.Wrapper
 					RemoveColumnSync(handler, column.Key);
 				}
 			}
-			private void CreateTableSync(SqliteHandler handler) => handler.ExecuteQuery(create);
+			private void CreateTableSync(SqliteHandler handler) => handler.ExecuteQuery(CreateQuery);
 			private void AlterColumnTypeSync(SqliteHandler handler, string name, Type type)
 			{
 				RemoveColumnSync(handler, name);

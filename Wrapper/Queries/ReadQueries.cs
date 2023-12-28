@@ -10,7 +10,7 @@ namespace SqlLite.Wrapper
 	{
 		private static SqliteCommand ReadCommand(SqliteContext context, TableInfo table, string keyname, object key)
 		{
-			SqliteCommand command = context.CreateCommand(string.Format(table.select, keyname));
+			SqliteCommand command = context.CreateCommand(string.Format(table.SelectQuery, keyname));
 			command.Parameters.Add(new SqliteParameter()
 			{
 				ParameterName = "Id",
@@ -171,7 +171,7 @@ namespace SqlLite.Wrapper
 					return default;
 				}
 
-				await ReadEntryAsync(entry, table, reader);
+ 				await ReadEntryAsync(entry, table, reader);
 				OnCommandExecuted(command, 1, entry);
 				return entry;
 			}

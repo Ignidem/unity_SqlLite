@@ -10,6 +10,40 @@ namespace SqlLite.Wrapper
 	{
 		private static readonly Dictionary<Type, TableInfo> TableCache = new Dictionary<Type, TableInfo>();
 
+		public async Task VerifyDependecies(Type type)
+		{
+			if (!typeof(ISqlTable).IsAssignableFrom(type))
+				return;
+
+			TableInfo info = await GetTableInfoAsync(type);
+			for (int i = 0; i < info.fields.Length; i++)
+			{
+				switch (info.fields[i])
+				{
+					case ForeignTableMember foreign:
+						await VerifyDependecies(foreign.FieldType);
+						break;
+
+					case SerializedTableMember serialized:
+						Type _sType = serialized.FieldType;
+						_sType = _sType.GetElementType() ?? _sType;
+						if (!typeof(ISqlTable).IsAssignableFrom(_sType))
+							break;
+
+						if (_sType.IsInterface || _sType.IsAbstract)
+						{
+							//These will still be verified during their initial proccess.
+							//Add initial verification here if necessary.
+							break;
+						}
+						
+						await VerifyDependecies(_sType);
+						break;
+				}
+				
+			}
+		}
+
 		private async Task<TableInfo> GetTableInfoAsync(Type type)
 		{
 			if (TableCache.TryGetValue(type, out TableInfo table))
@@ -57,12 +91,12 @@ namespace SqlLite.Wrapper
 					cmd.CommandText = $"drop table {table.name}";
 					cmd.ExecuteNonQuery();
 
-					cmd.CommandText = table.create;
+					cmd.CommandText = table.CreateQuery;
 					cmd.ExecuteNonQuery();
 
 					if (entries.Count == 0) return;
 
-					cmd.CommandText = table.save;
+					cmd.CommandText = table.SaveQuery;
 
 					for (int i = 0; i < entries.Count; i++)
 					{
@@ -130,7 +164,7 @@ namespace SqlLite.Wrapper
 			if (type == typeof(decimal))
 				return "NUM";
 
-			if (type == typeof(Guid))
+			if (type == typeof(Guid) || type == typeof(byte[]))
 				return "BLOB";
 
 			throw new Exception($"{type.Name} is not a supported sqlite type.");

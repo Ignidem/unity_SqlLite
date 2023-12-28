@@ -64,7 +64,7 @@ namespace SqlLite.Wrapper
 			{
 				object objValue = await context.ReadOneAsync(FieldType, value, IdFieldName, false);
 				if (objValue == null) return;
-				await base.SetValueAsync(context, instance, objValue);
+				base.SetValue(context, instance, objValue);
 			}
 		}
 	}

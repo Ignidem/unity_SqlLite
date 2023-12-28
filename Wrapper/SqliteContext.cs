@@ -8,13 +8,19 @@ namespace SqlLite.Wrapper
 {
 	public class SqliteContext : IDisposable, IAsyncDisposable
 	{
+		public readonly Guid guid;
 		public readonly SqliteConnection connection;
+		public readonly bool hasSharedConnection;
+		private readonly SqliteHandler handler;
 		private readonly List<IDisposable> modules = new();
 		private bool disposallocked;
 
-		public SqliteContext(SqliteConnection connection)
+		public SqliteContext(Guid guid, SqliteConnection connection, SqliteHandler handler, bool sharedConnection)
 		{
+			this.guid = guid;
 			this.connection = connection;
+			this.handler = handler;
+			hasSharedConnection = sharedConnection;
 		}
 
 		public T AddModule<T>(T module)
@@ -104,7 +110,7 @@ namespace SqlLite.Wrapper
 			}
 
 			modules.Clear();
-			connection?.Dispose();
+			handler.DisposeConnected(this);
 		}
 
 		public ValueTask DisposeAsync()
@@ -121,7 +127,7 @@ namespace SqlLite.Wrapper
 				IDisposable disposable = modules[i];
 				if (disposable is IAsyncDisposable asyncDisp)
 				{
-					await asyncDisp.DisposeAsync().AsTask();
+					await asyncDisp.DisposeAsync();
 				}
 				else
 				{
@@ -130,7 +136,7 @@ namespace SqlLite.Wrapper
 			}
 
 			modules.Clear();
-			await connection?.DisposeAsync().AsTask();
+			await handler.DisposeConnectedAsync(this);
 		}
 		#endregion
 	}

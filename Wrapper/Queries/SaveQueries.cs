@@ -20,7 +20,7 @@ namespace SqlLite.Wrapper
 
 				int? aId = table.idAutoIncr == null ? null : await table.idAutoIncr.GetNextIndexAsync(this);
 
-				SqliteCommand command = context.CreateCommand(table.save);
+				SqliteCommand command = context.CreateCommand(table.SaveQuery);
 				command.Parameters.AddWithValue(table.identifier.Name, null);
 				TableMember[] fields = table.fields;
 				for (int i = 0; i < fields.Length; i++)
@@ -77,7 +77,7 @@ namespace SqlLite.Wrapper
 				if (table.idAutoIncr != null && entry.Id.Equals(default))
 					await table.identifier.SetValueAsync(this, entry, await table.idAutoIncr.GetNextIndexAsync(this));
 
-				SqliteCommand command = context.CreateCommand(table.save);
+				SqliteCommand command = context.CreateCommand(table.SaveQuery);
 				command.Parameters.Add(await table.identifier.GetParameterAsync(this, entry));
 
 				TableMember[] fields = table.fields;
@@ -108,7 +108,7 @@ namespace SqlLite.Wrapper
 				if (table.idAutoIncr != null && entry.Id.Equals(default))
 					table.identifier.SetValue(this, entry, table.idAutoIncr.GetNextIndex(this));
 
-				SqliteCommand command = context.CreateCommand(table.save);
+				SqliteCommand command = context.CreateCommand(table.SaveQuery);
 				command.Parameters.Add(table.identifier.GetParameter(this, entry));
 
 				TableMember[] fields = table.fields;
