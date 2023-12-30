@@ -97,10 +97,14 @@ namespace SqlLite.Wrapper
 				const string id_Name = nameof(ISqlTable<int>.Id);
 				for (int i = 0; i < members.Count; i++)
 				{
-					if (members[i] is FieldInfo field && field.IsBackingField())
+					MemberInfo info = members[i];
+					if (info is FieldInfo field && field.IsBackingField())
 						continue;
 
-					TableMember member = members[i];
+					if (info.GetCustomAttribute<SqlIgnoreAttribute>() != null)
+						continue;
+
+					TableMember member = info;
 
 					if (member == null || member.IsNotSerializable)
 						continue;
