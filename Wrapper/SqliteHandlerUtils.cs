@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace SqlLite.Wrapper
@@ -44,7 +45,7 @@ namespace SqlLite.Wrapper
 			}
 		}
 
-		private async Task<TableInfo> GetTableInfoAsync(Type type)
+		internal async Task<TableInfo> GetTableInfoAsync(Type type)
 		{
 			if (TableCache.TryGetValue(type, out TableInfo table))
 				return table;
@@ -140,14 +141,14 @@ namespace SqlLite.Wrapper
 
 		private static string JoinFields(string seperator, TableMember[] fields, Func<TableMember, string> parse)
 		{
-			string str = null;
+			StringBuilder str = new();
 			for (int i = 0; i < fields.Length; i++)
 			{
 				TableMember field = fields[i];
-				str += parse(field);
-				if (i + 1 < fields.Length) str += seperator;
+				str.Append(parse(field));
+				if (i + 1 < fields.Length) str.Append(seperator);
 			}
-			return str;
+			return str.ToString();
 		}
 
 		private static string SqlType(Type type)

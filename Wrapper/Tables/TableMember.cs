@@ -11,7 +11,7 @@ namespace SqlLite.Wrapper
 {
 	public partial class SqliteHandler
 	{
-		private class TableMember
+		internal class TableMember
 		{
 			private static bool IsForeignReference(Type fieldType, string name, out Type table)
 			{

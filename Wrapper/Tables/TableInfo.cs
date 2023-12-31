@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using Utilities.Reflection;
 
@@ -14,7 +15,7 @@ namespace SqlLite.Wrapper
 		const string addFormat = "ALTER TABLE {0} ADD COLUMN {1} {0};";
 		const string removeFormat = "ALTER TABLE {0} DROP COLUMN {1};";
 
-		private class TableInfo
+		internal class TableInfo
 		{
 			private const BindingFlags bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 			public readonly string name;
@@ -61,13 +62,35 @@ namespace SqlLite.Wrapper
 
 			private void UpdateSaveQuery()
 			{
-				const string saveFormat = "INSERT OR REPLACE INTO {0} (Id{2}) VALUES (@{1}{3});";
-				const string fieldFormat = ", '{0}'";
-				const string valueFormat = ", @{0}";
-				SaveQuery = string.Format(saveFormat, type.Name, identifier.Name, 
-					JoinFields("", fields, f => string.Format(fieldFormat, f.Name)),
-					JoinFields("", fields, f => string.Format(valueFormat, f.Name))
-					);
+				SaveQuery = GetSaveQuery(0);
+			}
+
+			public string GetSaveQueryColumns()
+			{
+				const string savefieldFormat = "'{0}'";
+				return '(' + string.Format(savefieldFormat, identifier.Name) + ", " +
+						JoinFields(", ", fields, f => string.Format(savefieldFormat, f.Name))
+						+ ')';
+			}
+
+			private string GetSaveQueryValues(int index)
+			{
+				const string savevalueFormat = "@{0}";
+				string GetIndexSuffix() => index > 0 ? index.ToString() : null;
+				return '(' + string.Format(savevalueFormat, identifier.Name) + ", " +
+					JoinFields(", ", fields, f => string.Format(savevalueFormat, f.Name + GetIndexSuffix()))
+					+ ')';
+			}
+
+			public string GetSaveQuery(int count)
+			{
+				const string saveFormat = "INSERT OR REPLACE INTO {0} {1} VALUES {2}";
+				StringBuilder query = new();
+				query.AppendFormat(saveFormat, type.Name, GetSaveQueryColumns(), GetSaveQueryValues(0));
+				for (int i = 1; i < count; i++)
+					query.Append(", ").Append(GetSaveQueryValues(i));
+
+				return query.Append(';').ToString();
 			}
 
 			private void UpdateCreateTableQuery()

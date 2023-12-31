@@ -2,10 +2,10 @@
 
 namespace SqlLite.Wrapper.Attributes
 {
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
-	public class OnDeleteCascadeAttribute : OnDeleteTriggerAttribute
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = true)]
+	public sealed class OnDeleteCascadeAttribute : OnDeleteTriggerAttribute
 	{
-		protected const string deleteFormat = "DELETE FROM {0} WHERE {1}=old.{2}";
+		private const string deleteFormat = "DELETE FROM {0} WHERE {1}=old.{2}";
 		private const string nameFormat = "OnDeleteCascade_{0}_{1}";
 
 		public OnDeleteCascadeAttribute(string parentTable, string parentField, string childTable, string childField)

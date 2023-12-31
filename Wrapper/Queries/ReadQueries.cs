@@ -76,6 +76,7 @@ namespace SqlLite.Wrapper
 				throw e;
 			}
 		}
+
 		public async Task<T[]> ReadAllAsync<T>(object key, string keyname = "Id")
 		{
 			using SqliteContext context = await CreateContext().OpenAsync();
@@ -242,6 +243,37 @@ namespace SqlLite.Wrapper
 			}
 		}
 
+		public T[] ReadAll<T>(string query, Action<SqliteCommand> commandFormatter = null)
+		{
+			using SqliteContext context = CreateContext().Open();
+			object _target = null;
+			try
+			{
+				Type type = typeof(T);
+				TableInfo table = GetTableInfo(type);
+				List<T> entries = new List<T>();
+
+				SqliteCommand command = context.CreateCommand(query);
+				commandFormatter?.Invoke(command);
+				DbDataReader reader = context.Reader(command);
+
+				while (reader.Read())
+				{
+					T entry = table.ConstructEmpty<T>();
+					_target = entry;
+					ReadEntry(entry, table, reader);
+					entries.Add(entry);
+					OnCommandExecuted(command, 0, entry);
+				}
+
+				return entries.ToArray();
+			}
+			catch (Exception e)
+			{
+				OnException(e, context, _target);
+				throw e;
+			}
+		}
 		public T ReadOne<T>(object id, string keyname = "Id", bool createIfNone = false)
 		{
 			TableInfo table = GetTableInfo(typeof(T));
