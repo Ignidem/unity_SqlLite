@@ -77,7 +77,7 @@ namespace SqlLite.Wrapper
 			{
 				const string savevalueFormat = "@{0}";
 				string GetIndexSuffix() => index > 0 ? index.ToString() : null;
-				return '(' + string.Format(savevalueFormat, identifier.Name) + ", " +
+				return '(' + string.Format(savevalueFormat, identifier.Name + GetIndexSuffix()) + ", " +
 					JoinFields(", ", fields, f => string.Format(savevalueFormat, f.Name + GetIndexSuffix()))
 					+ ')';
 			}
@@ -95,7 +95,7 @@ namespace SqlLite.Wrapper
 
 			private void UpdateCreateTableQuery()
 			{
-				const string createFormat = "CREATE TABLE {0} ('{1}' {2} PRIMARYKEY{3});";
+				const string createFormat = "CREATE TABLE {0} ('{1}' {2} PRIMARY KEY{3});";
 				const string parameterFormat = ", '{0}' {1}{2}";
 
 				string FormatField(TableMember field)
