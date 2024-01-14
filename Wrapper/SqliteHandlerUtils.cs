@@ -168,7 +168,7 @@ namespace SqlLite.Wrapper
 			if (type == typeof(Guid) || type == typeof(byte[]))
 				return "BLOB";
 
-			throw new Exception($"{type.Name} is not a supported sqlite type.");
+			throw new Exception($"{type.Name} is not a supported sqlite type. In {type.DeclaringType}");
 		}
 
 		private static Dictionary<string, object> GetColumnValues(DbDataReader reader)
