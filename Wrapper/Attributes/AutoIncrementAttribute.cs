@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace SqlLite.Wrapper
 {
-	[AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Class)]
+	[AttributeUsage(AttributeTargets.Class)]
 	public class AutoIncrementAttribute : Attribute
 	{
 #pragma warning disable IDE1006 // Naming Styles

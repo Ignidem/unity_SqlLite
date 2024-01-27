@@ -66,7 +66,8 @@ namespace SqlLite.Wrapper.Serialization
 
 		public SqlSerializerAttribute(Type serializerType)
 		{
-			if (!serializerType.Inherits<ISqlSerializer>()) return;
+			if (!serializerType.Inherits<ISqlSerializer>())
+				throw new Exception($"Invalid Serializer " + serializerType);
 
 			this.serializerType = serializerType;
 		}

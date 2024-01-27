@@ -40,8 +40,7 @@ namespace SqlLite.Wrapper
 
 				fields = LoadSerializableFields(ref identifier);
 
-				idAutoIncr = type.GetCustomAttribute<AutoIncrementAttribute>()
-					?? identifier?.Member.GetCustomAttribute<AutoIncrementAttribute>();
+				idAutoIncr = type.GetCustomAttribute<AutoIncrementAttribute>();
 				idAutoIncr?.SetType(type);
 
 				triggers = type.GetCustomAttributes<TriggerAttribute>();
