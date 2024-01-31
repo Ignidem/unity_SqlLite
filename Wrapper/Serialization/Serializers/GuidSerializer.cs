@@ -13,7 +13,7 @@ namespace SqlLite.Wrapper.Serialization
 
 		protected override byte[] Serialize(Guid input)
 		{
-			return input.ToByteArray();
+			return input == default ? null : input.ToByteArray();
 		}
 	}
 
