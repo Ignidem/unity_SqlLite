@@ -6,9 +6,12 @@ namespace SqlLite.Wrapper.Serialization
 {
 	public class GuidSerializer : SqlSerializer<Guid, byte[]>
 	{
+		protected override bool CanDeserializeNull => true;
+		protected override bool CanSerializeNull => true;
+
 		protected override Guid Deserialize(byte[] value)
 		{
-			return new Guid(value);
+			return value == null ? default : new Guid(value);
 		}
 
 		protected override byte[] Serialize(Guid input)

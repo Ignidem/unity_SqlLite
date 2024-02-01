@@ -9,8 +9,8 @@ namespace SqlLite.Wrapper.Serialization
 		public Type DeserializedType => typeof(TDeserialized);
 		public Type SerializedType => typeof(TSerialized);
 
-		private bool IsDeserializedNullable => !DeserializedType.IsValueType;
-		private bool IsSerializedNullable => !SerializedType.IsValueType;
+		protected virtual bool CanSerializeNull => !DeserializedType.IsValueType;
+		protected virtual bool CanDeserializeNull => !SerializedType.IsValueType;
 
 		public SqlSerializer() { }
 
@@ -35,7 +35,7 @@ namespace SqlLite.Wrapper.Serialization
 			object value = input switch
 			{
 				TDeserialized _t => Serialize(_t),
-				null when IsDeserializedNullable => SerializeNull(),
+				null when CanSerializeNull => SerializeNull(),
 				_ => throw SerializingInvalidType(input)
 			};
 
@@ -46,7 +46,7 @@ namespace SqlLite.Wrapper.Serialization
 			object value = input switch
 			{
 				TDeserialized _t => await SerializeAsync(_t),
-				null when IsDeserializedNullable => SerializeNull(),
+				null when CanSerializeNull => SerializeNull(),
 				_ => throw SerializingInvalidType(input)
 			};
 
@@ -56,7 +56,7 @@ namespace SqlLite.Wrapper.Serialization
 		private object VerifySerializedValue(object value)
 		{
 			Type type = value?.GetType();
-			if (type != SerializedType && (type != null || !IsDeserializedNullable))
+			if (type != SerializedType && (type != null || !CanSerializeNull))
 			{
 				throw ReturningInvalidType(type);
 			}
@@ -84,7 +84,7 @@ namespace SqlLite.Wrapper.Serialization
 		{
 			return value switch
 			{
-				DBNull or null when IsSerializedNullable => DeserializeNull(),
+				DBNull or null when CanDeserializeNull => DeserializeNull(),
 				TSerialized _s => Deserialize(_s),
 				_ => throw DeserializingInvalidType(value)
 			};
@@ -93,7 +93,7 @@ namespace SqlLite.Wrapper.Serialization
 		{
 			return value switch
 			{
-				DBNull or null when IsSerializedNullable => DeserializeNull(),
+				DBNull or null when CanDeserializeNull => DeserializeNull(),
 				TSerialized _s => await DeserializeAsync(_s),
 				_ => throw DeserializingInvalidType(value)
 			};
