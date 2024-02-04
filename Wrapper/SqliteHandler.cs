@@ -10,7 +10,8 @@ using UnityEngine;
 namespace SqlLite.Wrapper
 {
 	public delegate void CommandExecutedDelegate(SqliteCommand command, int operations, object context);
-	public delegate void ExceptionDelegate(Exception exception, SqliteContext context, object target);
+	public delegate void ExceptionDelegate<T>(T exception, SqliteContext context, object target)
+		where T : Exception;
 
 	public partial class SqliteHandler : IDisposable
 	{
@@ -19,7 +20,7 @@ namespace SqlLite.Wrapper
 		private static readonly string defaultPath = PathPrefix + Application.persistentDataPath + "/sqlite.db";
 
 		public event CommandExecutedDelegate OnCommandExecuted;
-		public event ExceptionDelegate OnException;
+		public event ExceptionDelegate<Exception> OnException;
 
 		private readonly Dictionary<Guid, SqliteContext> sharedContexts = new Dictionary<Guid, SqliteContext>();
 		private readonly Dictionary<Guid, SqliteContext> contexts = new Dictionary<Guid, SqliteContext>();
