@@ -28,7 +28,7 @@ namespace SqlLite.Wrapper.Serialization
 		"select(i+16), (substr(o, i, i+15)), (o) from split where i<length(o))" +
 		"select * from {0} where Id in (select d from split limit -1 offset 1)";
 
-		private static SqliteHandler Handler => DefaultSqlite.Instance;
+		private static ISqliteHandler Handler => DefaultSqlite.Instance;
 		private const int GUIDSIZE = 16;
 
 		protected override byte[] Serialize(T[] input)

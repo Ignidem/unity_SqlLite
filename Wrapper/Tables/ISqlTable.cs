@@ -12,7 +12,7 @@ namespace SqlLite.Wrapper
 
 	public interface ISqlTable<I> : ISqlTable
 	{
-		SqliteHandler Handler => DefaultSqlite.Instance;
+		ISqliteHandler Handler => DefaultSqlite.Instance;
 
 		I Id { get; set; }
 
@@ -39,7 +39,7 @@ namespace SqlLite.Wrapper
 
 	public static class DefaultSqlite
 	{
-		public static SqliteHandler Instance = new SqliteHandler();
+		public static ISqliteHandler Instance = new SqliteHandler();
 
 		public static Task SaveEntryAsync<T>(this ISqlTable<T> entry)
 		{

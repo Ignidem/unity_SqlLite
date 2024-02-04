@@ -13,7 +13,7 @@ namespace SqlLite.Wrapper
 	public delegate void ExceptionDelegate<T>(T exception, SqliteContext context, object target)
 		where T : Exception;
 
-	public partial class SqliteHandler : IDisposable
+	public partial class SqliteHandler : ISqliteHandler
 	{
 		public const string PathPrefix = "URI=file:";
 
