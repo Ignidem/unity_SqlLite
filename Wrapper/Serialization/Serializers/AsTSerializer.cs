@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Utilities.Conversions;
 
 namespace SqlLite.Wrapper.Serialization
 {
@@ -9,14 +10,18 @@ namespace SqlLite.Wrapper.Serialization
 
 		protected override TKey Serialize(object input)
 		{
-			TEntry entry = (TEntry)input;
+			if (!input.TryConvertTo(out TEntry entry))
+				throw new System.InvalidCastException();
+
 			(entry as ISqlTable).Save();
 			return entry.Id;
 		}
 
 		protected override async Task<TKey> SerializeAsync(object input)
 		{
-			TEntry entry = (TEntry)input;
+			if (!input.TryConvertTo(out TEntry entry))
+				throw new System.InvalidCastException();
+
 			await (entry as ISqlTable).SaveAsync();
 			return entry.Id;
 		}
