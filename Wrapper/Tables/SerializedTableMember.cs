@@ -22,27 +22,27 @@ namespace SqlLite.Wrapper
 			{
 				ISqlSerializer serializer = attribute.Serializer;
 				object value = base.GetValue(context, instance);
-				return serializer.Serialize(value);
+				return serializer.SerializeObject(value);
 			}
 
 			public override async Task<object> GetValueAsync(SqliteHandler context, object instance)
 			{
 				ISqlSerializer serializer = attribute.Serializer;
 				object value = base.GetValue(context, instance);
-				return await serializer.SerializeAsync(value);
+				return await serializer.SerializeObjectAsync(value);
 			}
 
 			public override void SetValue(SqliteHandler context, object instance, object value)
 			{
 				ISqlSerializer serializer = attribute.Serializer;
-				value = serializer.Deserialize(value);
+				value = serializer.DeserializeObject(value);
 				base.SetValue(context, instance, value);
 			}
 
 			public override async Task SetValueAsync(SqliteHandler context, object instance, object value)
 			{
 				ISqlSerializer serializer = attribute.Serializer;
-				value = await serializer.DeserializeAsync(value);
+				value = await serializer.DeserializeObjectAsync(value);
 				base.SetValue(context, instance, value);
 			}
 		}

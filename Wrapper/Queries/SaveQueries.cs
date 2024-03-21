@@ -103,7 +103,7 @@ namespace SqlLite.Wrapper
 			}
 		}
 
-		public int SaveMany<T, I>(IEnumerable<T> entries, Action<T, int> onIterate = null)
+		public int SaveMany<T, I>(IEnumerable<T> entries, Action<T, int> onSave = null)
 			where T : ISqlTable<I>
 		{
 			using SqliteContext context = CreateContext().Open();
@@ -151,7 +151,7 @@ namespace SqlLite.Wrapper
 						command.Parameters.AddWithValue(ParameterName(field), v);
 					}
 
-					onIterate?.Invoke(entry, index);
+					onSave?.Invoke(entry, index);
 					index++;
 				}
 

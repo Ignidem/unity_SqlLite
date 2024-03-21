@@ -8,10 +8,10 @@ namespace SqlLite.Wrapper.Serialization
 		Type DeserializedType { get; }
 		Type SerializedType { get; }
 
-		object Serialize(object input);
-		object Deserialize(object sqlEntry);
+		object SerializeObject(object input);
+		object DeserializeObject(object sqlEntry);
 
-		Task<object> SerializeAsync(object input);
-		Task<object> DeserializeAsync(object entry);
+		Task<object> SerializeObjectAsync(object input);
+		Task<object> DeserializeObjectAsync(object entry);
 	}
 }

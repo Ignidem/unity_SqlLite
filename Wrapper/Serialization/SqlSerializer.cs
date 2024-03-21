@@ -30,7 +30,7 @@ namespace SqlLite.Wrapper.Serialization
 				(GetType(), SerializedType, value.GetType(), "deserializing");
 		}
 
-		public object Serialize(object input)
+		public object SerializeObject(object input)
 		{
 			object value = input switch
 			{
@@ -41,7 +41,7 @@ namespace SqlLite.Wrapper.Serialization
 
 			return VerifySerializedValue(value);
 		}
-		public async Task<object> SerializeAsync(object input)
+		public async Task<object> SerializeObjectAsync(object input)
 		{
 			object value = input switch
 			{
@@ -80,7 +80,7 @@ namespace SqlLite.Wrapper.Serialization
 			return Task.FromResult(Serialize(input));
 		}
 
-		public object Deserialize(object value)
+		public object DeserializeObject(object value)
 		{
 			return value switch
 			{
@@ -89,7 +89,7 @@ namespace SqlLite.Wrapper.Serialization
 				_ => throw DeserializingInvalidType(value)
 			};
 		}
-		public async Task<object> DeserializeAsync(object value)
+		public async Task<object> DeserializeObjectAsync(object value)
 		{
 			return value switch
 			{
