@@ -1,34 +1,13 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using Utils.Numbers;
 
 namespace SqlLite.Wrapper.Serialization
 {
 	public class BoolListSerializer : SqlSerializer<IList<bool>, byte[]>
 	{
-		protected override byte[] Serialize(IList<bool> input)
-		{
-			BitArray bits = new BitArray(input.Count);
-			for (int i = 0; i < input.Count; i++)
-			{
-				bits[i] = input[i];
-			}
+		protected override byte[] Serialize(IList<bool> input) => input.ToBytes();
 
-			byte[] byteArray = new byte[1];
-			bits.CopyTo(byteArray, 0);
-			return byteArray;
-		}
-
-		protected override IList<bool> Deserialize(byte[] value)
-		{
-			BitArray bits = new BitArray(value);
-			bool[] bools = new bool[bits.Length];
-			for (int i = 0; i < bits.Length; i++)
-			{
-				bools[i] = bits[i];
-			}
-
-			return bools;
-		}
+		protected override IList<bool> Deserialize(byte[] value) => value.ToBooleans();
 	}
 
 	public class BoolSerializer : SqlSerializer<bool, int>

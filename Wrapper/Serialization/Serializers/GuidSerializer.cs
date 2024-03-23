@@ -20,6 +20,8 @@ namespace SqlLite.Wrapper.Serialization
 		}
 	}
 
+	//For serializing a list of T : ISqlTable<Guid> into byte[] where each item's Guid key is listed.
+	//owner key with Read All Where is a much better idea.
 	public class ForeignGuidsSerializer<T> : SqlSerializer<T[], byte[]>
 		where T : ISqlTable<Guid>
 	{
