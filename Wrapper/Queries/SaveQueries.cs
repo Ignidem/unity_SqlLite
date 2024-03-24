@@ -35,6 +35,8 @@ namespace SqlLite.Wrapper
 
 				foreach (T entry in entries)
 				{
+					//Force async not to block process.
+					await Task.Yield();
 					_target = entry;
 
 					if (aId is not null)
@@ -113,7 +115,7 @@ namespace SqlLite.Wrapper
 				Type type = typeof(T);
 				TableInfo table = GetTableInfo(type);
 
-				int? aId = table.idAutoIncr == null ? null : table.idAutoIncr.GetNextIndex(this);
+				int? aId = table.idAutoIncr?.GetNextIndex(this);
 
 				SqliteCommand command = context.CreateCommand(table.GetSaveQuery(entries.Count()));
 

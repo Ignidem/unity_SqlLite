@@ -61,6 +61,7 @@ namespace SqlLite.Wrapper
 
 				while (await reader.ReadAsync())
 				{
+					await Task.Yield();
 					T entry = table.ConstructEmpty<T>();
 					_target = entry;
 					await ReadEntryAsync(entry, table, reader);
