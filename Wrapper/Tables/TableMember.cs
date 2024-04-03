@@ -2,10 +2,12 @@
 using SqlLite.Wrapper.Serialization;
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using Utilities.Conversions;
 using Utilities.Reflection;
+using Utilities.Reflection.Members;
 
 namespace SqlLite.Wrapper
 {
@@ -79,41 +81,32 @@ namespace SqlLite.Wrapper
 				return null;
 			}
 
-			public string Name => isField ? field.Name : prop.Name;
-			public Type FieldType => isField ? field.FieldType : prop.PropertyType;
+			public string Name => Member.Name;
+			public Type FieldType => member.ValueType();
 			public virtual Type SerializedType => FieldType;
-			public MemberInfo Member => isField ? field : prop;
+			public MemberInfo Member => member.MemberInfo;
 
 			public bool IsNotSerializable => !CanRead || nonSerialized != null;
-			public bool IsBackingField => field != null && field.IsBackingField();
+			public bool IsBackingField => member.MemberType == MemberTypes.Field && (Member as FieldInfo).IsBackingField();
 
-			public bool CanRead => isField || prop.GetMethod != null;
-			public bool CanWrite => isField || prop.SetMethod != null;
+			public bool CanRead => member.CanRead;
+			public bool CanWrite => member.CanWrite;
 
 			public virtual bool IsForeign => false;
 
-			private readonly bool isField;
-			private readonly FieldInfo field;
-			private readonly PropertyInfo prop;
+			private readonly Member member;
+
+			private readonly Delegate setter;
+			private readonly Delegate getter;
 
 			//Attributes
 			private readonly NonSerializedAttribute nonSerialized;
 
-			private Type Parent => isField ? field.DeclaringType : prop.DeclaringType;
+			private Type Parent => member.MemberInfo.DeclaringType;
 
 			public TableMember(MemberInfo member)
 			{
-				if (member is FieldInfo field)
-				{
-					isField = true;
-					this.field = field;
-				}
-				else
-				{
-					prop = (PropertyInfo)member;
-					isField = false;
-				}
-
+				this.member = member;
 				nonSerialized = member.GetCustomAttribute<NonSerializedAttribute>();
 			}
 
@@ -129,7 +122,7 @@ namespace SqlLite.Wrapper
 
 			public virtual object GetValue(SqliteHandler context, object instance)
 			{
-				return isField ? field.GetValue(instance) : prop.GetValue(instance);
+				return member.Read(instance);
 			}
 
 			public virtual Task<object> GetValueAsync(SqliteHandler context, object instance)
@@ -147,8 +140,7 @@ namespace SqlLite.Wrapper
 				if (value != null && value.TryConvertTo(FieldType, out object v))
 					value = v;
 
-				if (isField) field.SetValue(instance, value);
-				else prop.SetValue(instance, value);
+				member.Write(instance, value);
 			}
 			public virtual Task SetValueAsync(SqliteHandler context, object instance, object value)
 			{
@@ -157,7 +149,7 @@ namespace SqlLite.Wrapper
 			}
 
 			public override string ToString()
-			 => $"{Parent.Name}.{Name} ({FieldType.Name})";
+				=> $"{Parent.Name}.{Name} ({FieldType.Name})";
 		}
 	}
 }
