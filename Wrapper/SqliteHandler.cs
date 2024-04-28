@@ -39,7 +39,7 @@ namespace SqlLite.Wrapper
 
 		public void Dispose()
 		{
-			Debug.Log(contexts.Count + " Remaining connections.");
+			//Debug.Log(contexts.Count + " Remaining connections.");
 
 			foreach (KeyValuePair<Guid, SqliteContext> cnt in contexts)
 			{
