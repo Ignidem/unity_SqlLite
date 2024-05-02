@@ -165,7 +165,7 @@ namespace SqlLite.Wrapper
 			if (type == typeof(decimal))
 				return "NUM";
 
-			if (type == typeof(Guid) || type == typeof(byte[]))
+			if (type == typeof(Guid) || type == typeof(byte[]) || type == typeof(byte))
 				return "BLOB";
 
 			throw new Exception($"{type.Name} is not a supported sqlite type. In {type.DeclaringType}");
