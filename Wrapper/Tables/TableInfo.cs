@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Utilities.Reflection;
+using Utils.Serializers.CustomSerializers;
 
 namespace SqlLite.Wrapper
 {
@@ -45,9 +46,9 @@ namespace SqlLite.Wrapper
 
 				triggers = type.GetCustomAttributes<TriggerAttribute>();
 
-				if (type.TryGetAttribute(out SqlSerializerAttribute serializer))
+				if (type.TryGetAttribute(out SerializerAttribute serializer))
 				{
-					SqlSerializerAttribute.DefaultSerializers[type] = serializer;
+					SerializerAttribute.DefaultSerializers[type] = serializer;
 				}
 
 				SelectQuery = $"SELECT * FROM {type.Name} WHERE {{0}} = @{identifier.Name}";

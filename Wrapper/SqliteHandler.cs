@@ -1,11 +1,15 @@
 ﻿using Mono.Data.Sqlite;
-using SqlLite.Wrapper.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
+using Utils.Serializers.CustomSerializers;
+using Vector2IntSerializer = SqlLite.Wrapper.Serialization.Vector2IntSerializer;
+using Vector2Serializer = SqlLite.Wrapper.Serialization.Vector2Serializer;
+using Vector3IntSerializer = SqlLite.Wrapper.Serialization.Vector3IntSerializer;
+using Vector3Serializer = SqlLite.Wrapper.Serialization.Vector3Serializer;
 
 namespace SqlLite.Wrapper
 {
@@ -18,6 +22,14 @@ namespace SqlLite.Wrapper
 		public const string PathPrefix = "URI=file:";
 
 		private static readonly string defaultPath = PathPrefix + Application.persistentDataPath + "/sqlite.db";
+
+		static SqliteHandler()
+		{
+			SerializerAttribute.DefaultSerializers[typeof(Vector2Int)] = new(typeof(Vector2IntSerializer));
+			SerializerAttribute.DefaultSerializers[typeof(Vector3Int)] = new(typeof(Vector3IntSerializer));
+			SerializerAttribute.DefaultSerializers[typeof(Vector2)] = new(typeof(Vector2Serializer));
+			SerializerAttribute.DefaultSerializers[typeof(Vector3)] = new(typeof(Vector3Serializer));
+		}
 
 		public event CommandExecutedDelegate OnCommandExecuted;
 		public event ExceptionDelegate<Exception> OnException;

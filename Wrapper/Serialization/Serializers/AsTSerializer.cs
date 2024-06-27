@@ -1,9 +1,10 @@
 ﻿using System.Threading.Tasks;
 using Utilities.Conversions;
+using Utils.Serializers.CustomSerializers;
 
 namespace SqlLite.Wrapper.Serialization
 {
-	public class AsEntrySerializer<TEntry, TKey> : SqlSerializer<object, TKey>
+	public class AsEntrySerializer<TEntry, TKey> : Serializer<object, TKey>
 		where TEntry : ISqlTable<TKey>
 	{
 		public static ISqliteHandler Handler = DefaultSqlite.Instance;

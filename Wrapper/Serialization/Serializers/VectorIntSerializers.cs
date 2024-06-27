@@ -1,8 +1,9 @@
 ﻿using UnityEngine;
+using Utils.Serializers.CustomSerializers;
 
 namespace SqlLite.Wrapper.Serialization
 {
-	public class Vector2IntSerializer : SqlSerializer<Vector2Int, string>
+	public class Vector2IntSerializer : Serializer<Vector2Int, string>
 	{
 		protected override Vector2Int Deserialize(string value)
 		{
@@ -17,7 +18,7 @@ namespace SqlLite.Wrapper.Serialization
 		}
 	}
 
-	public class Vector3IntSerializer : SqlSerializer<Vector3Int, string>
+	public class Vector3IntSerializer : Serializer<Vector3Int, string>
 	{
 		protected override Vector3Int Deserialize(string value)
 		{
@@ -32,7 +33,7 @@ namespace SqlLite.Wrapper.Serialization
 		}
 	}
 
-	public class Vector2Serializer : SqlSerializer<Vector2, string>
+	public class Vector2Serializer : Serializer<Vector2, string>
 	{
 		protected override Vector2 Deserialize(string value)
 		{
@@ -47,7 +48,7 @@ namespace SqlLite.Wrapper.Serialization
 		}
 	}
 
-	public class Vector3Serializer : SqlSerializer<Vector3, string>
+	public class Vector3Serializer : Serializer<Vector3, string>
 	{
 		protected override Vector3 Deserialize(string value)
 		{

@@ -1,13 +1,12 @@
 ﻿using Mono.Data.Sqlite;
-using SqlLite.Wrapper.Serialization;
 using System;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using Utilities.Conversions;
 using Utilities.Reflection;
 using Utilities.Reflection.Members;
+using Utils.Serializers.CustomSerializers;
 
 namespace SqlLite.Wrapper
 {
@@ -60,11 +59,11 @@ namespace SqlLite.Wrapper
 
 				if (type == null) return null;
 
-				SqlSerializerAttribute serializerAttribute = member.GetCustomAttribute<SqlSerializerAttribute>();
+				SerializerAttribute serializerAttribute = member.GetCustomAttribute<SerializerAttribute>();
 				if (serializerAttribute?.IsValid ?? false)
 					return new SerializedTableMember(member, serializerAttribute);
 
-				if (SqlSerializerAttribute.DefaultSerializers.TryGet(type, out SqlSerializerAttribute seri))
+				if (SerializerAttribute.DefaultSerializers.TryGet(type, out SerializerAttribute seri))
 					return new SerializedTableMember(member, seri);
 
 				if (IsTypeSupported(type))
